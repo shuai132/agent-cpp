@@ -143,7 +143,26 @@ json LlmRequest::to_openai_format() const {
 
   for (const auto &msg : messages) {
     if (msg.role() == Role::System) continue;
-    msgs.push_back(msg.to_api_format());
+
+    // OpenAI requires tool results as separate role="tool" messages
+    auto tool_results = msg.tool_results();
+    if (!tool_results.empty()) {
+      // Also include any text content from the message as a user message
+      auto text = msg.text();
+      if (!text.empty()) {
+        msgs.push_back({{"role", "user"}, {"content", text}});
+      }
+
+      for (const auto *tr : tool_results) {
+        json tool_msg;
+        tool_msg["role"] = "tool";
+        tool_msg["tool_call_id"] = tr->tool_call_id;
+        tool_msg["content"] = tr->output;
+        msgs.push_back(tool_msg);
+      }
+    } else {
+      msgs.push_back(msg.to_api_format());
+    }
   }
   request["messages"] = msgs;
 
