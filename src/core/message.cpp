@@ -153,6 +153,8 @@ json Message::to_json() const {
                 {"cache_read_tokens", usage_.cache_read_tokens},
                 {"cache_write_tokens", usage_.cache_write_tokens}};
 
+  j["created_at"] = std::chrono::duration_cast<std::chrono::seconds>(created_at_.time_since_epoch()).count();
+
   return j;
 }
 
@@ -193,6 +195,10 @@ Message Message::from_json(const json &j) {
     msg.usage_.output_tokens = u.value("output_tokens", 0);
     msg.usage_.cache_read_tokens = u.value("cache_read_tokens", 0);
     msg.usage_.cache_write_tokens = u.value("cache_write_tokens", 0);
+  }
+
+  if (j.contains("created_at")) {
+    msg.created_at_ = Timestamp(std::chrono::seconds(j["created_at"].get<int64_t>()));
   }
 
   return msg;

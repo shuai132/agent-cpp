@@ -152,6 +152,10 @@ class Session : public std::enable_shared_from_this<Session> {
 
   void prune_old_outputs();
 
+  // Compaction helpers
+  std::vector<Message> collect_messages_for_compaction() const;
+  std::string stream_compaction(const llm::LlmRequest &request);
+
   // Doom loop detection
   bool detect_doom_loop(const std::string &tool_name, const json &args);
 

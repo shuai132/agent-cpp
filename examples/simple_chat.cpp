@@ -80,9 +80,32 @@ static void print_history(const std::shared_ptr<Session>& session) {
   const auto& messages = session->messages();
   if (messages.empty()) return;
 
+  // Find the most recent summary
+  int summary_index = -1;
+  for (int i = static_cast<int>(messages.size()) - 1; i >= 0; --i) {
+    if (messages[i].is_summary() && messages[i].is_finished()) {
+      summary_index = i;
+      break;
+    }
+  }
+
   std::cout << "\n--- Conversation History ---\n";
-  for (const auto& msg : messages) {
+
+  if (summary_index > 0) {
+    std::cout << "[" << summary_index << " earlier messages compacted]\n";
+  }
+
+  // Start from summary (or beginning if no summary)
+  size_t start = (summary_index >= 0) ? static_cast<size_t>(summary_index) : 0;
+
+  for (size_t i = start; i < messages.size(); ++i) {
+    const auto& msg = messages[i];
     if (msg.role() == Role::System) continue;
+
+    if (msg.is_summary()) {
+      std::cout << "\n[Summary]\n" << msg.text() << "\n";
+      continue;
+    }
 
     if (msg.role() == Role::User) {
       // Skip tool result messages (user messages that only contain tool results)

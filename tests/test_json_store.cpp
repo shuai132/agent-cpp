@@ -262,3 +262,66 @@ TEST_F(SessionResumeTest, ListAllSessions) {
   auto sessions = store_->list_sessions();
   ASSERT_EQ(sessions.size(), 2);
 }
+
+TEST_F(SessionResumeTest, ResumeWithSummary) {
+  asio::io_context io_ctx;
+
+  // Create session and add messages including a summary
+  auto session = Session::create(io_ctx, config_, AgentType::Build, store_);
+  auto session_id = session->id();
+
+  session->add_message(Message::user("Old question 1"));
+  session->add_message(Message::assistant("Old answer 1"));
+  session->add_message(Message::user("Old question 2"));
+  session->add_message(Message::assistant("Old answer 2"));
+
+  // Add a summary
+  Message summary(Role::Assistant, "");
+  summary.add_text("Summary: user asked two questions about testing");
+  summary.set_summary(true);
+  summary.set_finished(true);
+  summary.set_synthetic(true);
+  session->add_message(std::move(summary));
+
+  // Add post-summary messages
+  session->add_message(Message::user("New question"));
+  session->add_message(Message::assistant("New answer"));
+
+  // Destroy and resume
+  session.reset();
+
+  auto resumed = Session::resume(io_ctx, config_, session_id, store_);
+  ASSERT_NE(resumed, nullptr);
+
+  // All messages should be loaded
+  EXPECT_EQ(resumed->messages().size(), 7);
+
+  // But context messages should only include summary and after
+  auto context = resumed->get_context_messages();
+  ASSERT_EQ(context.size(), 3);
+  EXPECT_TRUE(context[0].is_summary());
+  EXPECT_EQ(context[0].text(), "Summary: user asked two questions about testing");
+  EXPECT_EQ(context[1].text(), "New question");
+  EXPECT_EQ(context[2].text(), "New answer");
+}
+
+TEST_F(SessionResumeTest, MessageCreatedAtPersistence) {
+  asio::io_context io_ctx;
+
+  auto session = Session::create(io_ctx, config_, AgentType::Build, store_);
+  auto session_id = session->id();
+
+  session->add_message(Message::user("Test timestamp"));
+  auto original_time = session->messages()[0].created_at();
+
+  session.reset();
+
+  auto resumed = Session::resume(io_ctx, config_, session_id, store_);
+  ASSERT_NE(resumed, nullptr);
+  ASSERT_EQ(resumed->messages().size(), 1);
+
+  // Timestamp should be preserved (within 1 second precision due to epoch serialization)
+  auto loaded_time = resumed->messages()[0].created_at();
+  auto diff = std::chrono::duration_cast<std::chrono::seconds>(original_time - loaded_time).count();
+  EXPECT_LE(std::abs(diff), 1);
+}

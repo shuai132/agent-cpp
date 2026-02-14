@@ -40,3 +40,50 @@ TEST_F(SessionTest, CreateChildSession) {
   EXPECT_TRUE(child->parent_id().has_value());
   EXPECT_EQ(*child->parent_id(), parent->id());
 }
+
+TEST_F(SessionTest, GetContextMessagesWithSummary) {
+  asio::io_context io_ctx;
+  auto session = Session::create(io_ctx, config_, AgentType::Build);
+
+  // Add some messages
+  session->add_message(Message::user("First question"));
+  session->add_message(Message::assistant("First answer"));
+  session->add_message(Message::user("Second question"));
+  session->add_message(Message::assistant("Second answer"));
+
+  // Add a summary message
+  Message summary(Role::Assistant, "");
+  summary.add_text("Summary of conversation so far");
+  summary.set_summary(true);
+  summary.set_finished(true);
+  session->add_message(std::move(summary));
+
+  // Add messages after summary
+  session->add_message(Message::user("Third question"));
+  session->add_message(Message::assistant("Third answer"));
+
+  // get_context_messages should return only summary + messages after it
+  auto context = session->get_context_messages();
+
+  // Should have: summary + user("Third question") + assistant("Third answer")
+  ASSERT_EQ(context.size(), 3);
+  EXPECT_TRUE(context[0].is_summary());
+  EXPECT_EQ(context[0].text(), "Summary of conversation so far");
+  EXPECT_EQ(context[1].text(), "Third question");
+  EXPECT_EQ(context[2].text(), "Third answer");
+
+  // But all messages are still stored
+  EXPECT_EQ(session->messages().size(), 7);
+}
+
+TEST_F(SessionTest, GetContextMessagesNoSummary) {
+  asio::io_context io_ctx;
+  auto session = Session::create(io_ctx, config_, AgentType::Build);
+
+  session->add_message(Message::user("Hello"));
+  session->add_message(Message::assistant("Hi"));
+
+  // Without summary, get_context_messages returns all
+  auto context = session->get_context_messages();
+  ASSERT_EQ(context.size(), 2);
+}

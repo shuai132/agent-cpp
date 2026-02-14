@@ -110,29 +110,22 @@ void Session::add_message(Message msg) {
 }
 
 std::vector<Message> Session::get_context_messages() const {
-  // Filter out compacted messages
-  std::vector<Message> result;
-
-  bool found_summary = false;
-
-  // Scan from end to find most recent summary
-  for (auto it = messages_.rbegin(); it != messages_.rend(); ++it) {
-    if (it->is_summary() && it->is_finished()) {
-      found_summary = true;
-    }
-
-    if (found_summary) {
-      result.insert(result.begin(), *it);
-      if (it->is_summary()) break;  // Stop at the summary
+  // Find most recent summary, return summary + everything after it
+  int summary_index = -1;
+  for (int i = static_cast<int>(messages_.size()) - 1; i >= 0; --i) {
+    if (messages_[i].is_summary() && messages_[i].is_finished()) {
+      summary_index = i;
+      break;
     }
   }
 
-  if (!found_summary) {
+  if (summary_index < 0) {
     // No summary found, return all messages
     return messages_;
   }
 
-  return result;
+  // Return summary + all messages after it
+  return std::vector<Message>(messages_.begin() + summary_index, messages_.end());
 }
 
 int64_t Session::estimated_context_tokens() const {
@@ -482,18 +475,170 @@ bool Session::needs_compaction() const {
 
 void Session::trigger_compaction() {
   state_ = SessionState::Compacting;
-
-  // In a full implementation, this would:
-  // 1. Create a compaction marker message
-  // 2. Use a compaction agent to summarize the conversation
-  // 3. Mark old messages as compacted
-
   spdlog::info("Session {} triggering compaction", id_);
 
-  // For now, just prune
+  if (!provider_) {
+    // No provider available, fall back to pruning only
+    prune_old_outputs();
+    state_ = SessionState::Running;
+    return;
+  }
+
+  // 1. Collect messages to summarize
+  auto messages_to_summarize = collect_messages_for_compaction();
+
+  if (messages_to_summarize.empty()) {
+    prune_old_outputs();
+    state_ = SessionState::Running;
+    return;
+  }
+
+  // 2. Build compaction request
+  llm::LlmRequest request;
+  request.model = agent_config_.model;
+  request.system_prompt =
+      "You are a conversation summarizer. Summarize the following conversation into a concise summary "
+      "that preserves all important context, decisions made, code changes, file paths, and any ongoing tasks. "
+      "The summary will be used to continue the conversation, so include all information needed to pick up "
+      "where the conversation left off.\n\n"
+      "Format your summary as a structured overview:\n"
+      "- **Topic/Goal**: What the user is working on\n"
+      "- **Progress**: What has been done so far\n"
+      "- **Key Decisions**: Important choices made\n"
+      "- **Current State**: Where things stand now\n"
+      "- **Pending Items**: What still needs to be done (if any)";
+  request.messages = std::move(messages_to_summarize);
+  // No tools for compaction agent
+
+  // 3. Call LLM to generate summary
+  std::string summary_text = stream_compaction(request);
+
+  if (summary_text.empty()) {
+    spdlog::warn("Session {} compaction failed, falling back to prune", id_);
+    prune_old_outputs();
+    state_ = SessionState::Running;
+    return;
+  }
+
+  // 4. Create summary message
+  Message summary_msg(Role::Assistant, "");
+  summary_msg.add_text(summary_text);
+  summary_msg.set_summary(true);
+  summary_msg.set_finished(true);
+  summary_msg.set_synthetic(true);
+
+  // 5. Add summary message (auto-persists via store)
+  add_message(std::move(summary_msg));
+
+  // 6. Prune old tool outputs
   prune_old_outputs();
 
   state_ = SessionState::Running;
+  spdlog::info("Session {} compaction completed", id_);
+}
+
+std::vector<Message> Session::collect_messages_for_compaction() const {
+  // Find the most recent summary
+  int summary_index = -1;
+  for (int i = static_cast<int>(messages_.size()) - 1; i >= 0; --i) {
+    if (messages_[i].is_summary() && messages_[i].is_finished()) {
+      summary_index = i;
+      break;
+    }
+  }
+
+  // Collect all messages (or all since last summary) to be summarized
+  // We pass the full context to the LLM so it can generate a comprehensive summary
+  std::vector<Message> result;
+
+  if (summary_index >= 0) {
+    // Include old summary + everything after it (to create a new combined summary)
+    for (int i = summary_index; i < static_cast<int>(messages_.size()); ++i) {
+      result.push_back(messages_[i]);
+    }
+  } else {
+    // No summary exists, include all messages
+    result = messages_;
+  }
+
+  // Convert to a single user message containing the conversation for the summarizer
+  if (result.empty()) return {};
+
+  std::string conversation_text;
+  for (const auto &msg : result) {
+    if (msg.role() == Role::System) continue;
+
+    if (msg.is_summary()) {
+      conversation_text += "[Previous Summary]\n" + msg.text() + "\n\n";
+      continue;
+    }
+
+    std::string role_str = (msg.role() == Role::User) ? "User" : "Assistant";
+    auto text = msg.text();
+
+    if (!text.empty()) {
+      conversation_text += role_str + ": " + text + "\n\n";
+    }
+
+    // Include tool calls briefly
+    for (const auto *tc : msg.tool_calls()) {
+      conversation_text += "[Tool call: " + tc->name + "(" + tc->arguments.dump() + ")]\n";
+    }
+
+    // Include tool results briefly (skip compacted ones)
+    for (const auto *tr : msg.tool_results()) {
+      if (tr->compacted) {
+        conversation_text += "[Tool result: " + tr->tool_name + " (content cleared)]\n";
+      } else {
+        auto output = tr->output;
+        if (output.size() > 500) {
+          output = output.substr(0, 500) + "... (truncated)";
+        }
+        conversation_text += "[Tool result: " + tr->tool_name + "]\n" + output + "\n\n";
+      }
+    }
+  }
+
+  // Return as a single user message asking for a summary
+  std::vector<Message> compaction_messages;
+  compaction_messages.push_back(Message::user("Please summarize the following conversation:\n\n" + conversation_text));
+  return compaction_messages;
+}
+
+std::string Session::stream_compaction(const llm::LlmRequest &request) {
+  std::promise<void> done;
+  auto done_future = done.get_future();
+
+  std::string accumulated_text;
+  std::optional<std::string> error_message;
+
+  provider_->stream(
+      request,
+      [&accumulated_text, &error_message](const llm::StreamEvent &event) {
+        std::visit(
+            [&accumulated_text, &error_message](auto &&e) {
+              using T = std::decay_t<decltype(e)>;
+              if constexpr (std::is_same_v<T, llm::TextDelta>) {
+                accumulated_text += e.text;
+              } else if constexpr (std::is_same_v<T, llm::StreamError>) {
+                error_message = e.message;
+              }
+              // Ignore tool calls and other events for compaction
+            },
+            event);
+      },
+      [&done]() {
+        done.set_value();
+      });
+
+  done_future.wait();
+
+  if (error_message) {
+    spdlog::warn("Compaction stream error: {}", *error_message);
+    return "";
+  }
+
+  return accumulated_text;
 }
 
 void Session::handle_compaction() {
