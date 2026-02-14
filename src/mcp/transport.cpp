@@ -43,14 +43,14 @@ json JsonRpcRequest::to_json() const {
 
 std::string JsonRpcResponse::error_message() const {
   if (!error.has_value()) return "";
-  auto &err = error.value();
+  auto& err = error.value();
   if (err.contains("message")) {
     return err["message"].get<std::string>();
   }
   return err.dump();
 }
 
-JsonRpcResponse JsonRpcResponse::from_json(const json &j) {
+JsonRpcResponse JsonRpcResponse::from_json(const json& j) {
   JsonRpcResponse resp;
   if (j.contains("id") && !j["id"].is_null()) {
     resp.id = j["id"].get<int64_t>();
@@ -146,19 +146,19 @@ class StdioTransport::Impl {
         }
 
         // Set environment variables
-        for (const auto &[key, val] : env_) {
+        for (const auto& [key, val] : env_) {
           setenv(key.c_str(), val.c_str(), 1);
         }
 
         // Build argv
-        std::vector<const char *> argv;
+        std::vector<const char*> argv;
         argv.push_back(command_.c_str());
-        for (const auto &arg : args_) {
+        for (const auto& arg : args_) {
           argv.push_back(arg.c_str());
         }
         argv.push_back(nullptr);
 
-        execvp(command_.c_str(), const_cast<char *const *>(argv.data()));
+        execvp(command_.c_str(), const_cast<char* const*>(argv.data()));
 
         // If exec fails
         _exit(127);
@@ -218,7 +218,7 @@ class StdioTransport::Impl {
     // Fail all pending requests
     {
       std::lock_guard<std::mutex> lock(pending_mutex_);
-      for (auto &[id, promise] : pending_requests_) {
+      for (auto& [id, promise] : pending_requests_) {
         JsonRpcResponse err_resp;
         err_resp.id = id;
         err_resp.error = json{{"code", -32000}, {"message", "Transport disconnected"}};
@@ -230,7 +230,7 @@ class StdioTransport::Impl {
     state_ = TransportState::Disconnected;
   }
 
-  std::future<JsonRpcResponse> send_request(const JsonRpcRequest &request) {
+  std::future<JsonRpcResponse> send_request(const JsonRpcRequest& request) {
     std::promise<JsonRpcResponse> promise;
     auto future = promise.get_future();
 
@@ -251,7 +251,7 @@ class StdioTransport::Impl {
     return future;
   }
 
-  void send_notification(const JsonRpcNotification &notification) {
+  void send_notification(const JsonRpcNotification& notification) {
     if (state_ != TransportState::Connected) return;
     write_message(notification.to_json());
   }
@@ -266,7 +266,7 @@ class StdioTransport::Impl {
   }
 
  private:
-  void write_message(const json &msg) {
+  void write_message(const json& msg) {
     std::string body = msg.dump();
     std::string header = "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n";
     std::string full = header + body;
@@ -324,14 +324,14 @@ class StdioTransport::Impl {
         try {
           auto msg = json::parse(body);
           handle_incoming(msg);
-        } catch (const std::exception &e) {
+        } catch (const std::exception& e) {
           spdlog::warn("[MCP] Failed to parse JSON message: {}", e.what());
         }
       }
     }
   }
 
-  void handle_incoming(const json &msg) {
+  void handle_incoming(const json& msg) {
     // Check if it's a response (has "id" and either "result" or "error")
     if (msg.contains("id") && !msg["id"].is_null() && (msg.contains("result") || msg.contains("error"))) {
       auto resp = JsonRpcResponse::from_json(msg);
@@ -398,7 +398,7 @@ class StdioTransport::Impl {
   }
 
   void disconnect() {}
-  std::future<JsonRpcResponse> send_request(const JsonRpcRequest &request) {
+  std::future<JsonRpcResponse> send_request(const JsonRpcRequest& request) {
     std::promise<JsonRpcResponse> p;
     JsonRpcResponse resp;
     resp.id = request.id;
@@ -406,7 +406,7 @@ class StdioTransport::Impl {
     p.set_value(std::move(resp));
     return p.get_future();
   }
-  void send_notification(const JsonRpcNotification &) {}
+  void send_notification(const JsonRpcNotification&) {}
   void set_notification_handler(Transport::NotificationHandler) {}
   TransportState state() const {
     return TransportState::Failed;
@@ -429,11 +429,11 @@ StdioTransport::StdioTransport(std::string command, std::vector<std::string> arg
 
 StdioTransport::~StdioTransport() = default;
 
-std::future<JsonRpcResponse> StdioTransport::send_request(const JsonRpcRequest &request) {
+std::future<JsonRpcResponse> StdioTransport::send_request(const JsonRpcRequest& request) {
   return impl_->send_request(request);
 }
 
-void StdioTransport::send_notification(const JsonRpcNotification &notification) {
+void StdioTransport::send_notification(const JsonRpcNotification& notification) {
   impl_->send_notification(notification);
 }
 
@@ -486,7 +486,7 @@ class SseTransport::Impl {
 
     // Fail all pending requests
     std::lock_guard<std::mutex> lock(pending_mutex_);
-    for (auto &[id, promise] : pending_requests_) {
+    for (auto& [id, promise] : pending_requests_) {
       JsonRpcResponse err_resp;
       err_resp.id = id;
       err_resp.error = json{{"code", -32000}, {"message", "Transport disconnected"}};
@@ -495,7 +495,7 @@ class SseTransport::Impl {
     pending_requests_.clear();
   }
 
-  std::future<JsonRpcResponse> send_request(const JsonRpcRequest &request) {
+  std::future<JsonRpcResponse> send_request(const JsonRpcRequest& request) {
     std::promise<JsonRpcResponse> promise;
     auto future = promise.get_future();
 
@@ -554,7 +554,7 @@ class SseTransport::Impl {
           it->second.set_value(std::move(resp));
           pending_requests_.erase(it);
         }
-      } catch (const std::exception &e) {
+      } catch (const std::exception& e) {
         std::lock_guard<std::mutex> lock(pending_mutex_);
         auto it = pending_requests_.find(request.id);
         if (it != pending_requests_.end()) {
@@ -570,7 +570,7 @@ class SseTransport::Impl {
     return future;
   }
 
-  void send_notification(const JsonRpcNotification &notification) {
+  void send_notification(const JsonRpcNotification& notification) {
     if (state_ != TransportState::Connected) return;
 
     // Fire and forget HTTP POST
@@ -587,7 +587,7 @@ class SseTransport::Impl {
 
         http->request(url_, opts);
         io_ctx.run();
-      } catch (const std::exception &e) {
+      } catch (const std::exception& e) {
         spdlog::warn("[MCP] SSE notification send failed: {}", e.what());
       }
     }).detach();
@@ -625,11 +625,11 @@ SseTransport::SseTransport(std::string url, std::map<std::string, std::string> h
 
 SseTransport::~SseTransport() = default;
 
-std::future<JsonRpcResponse> SseTransport::send_request(const JsonRpcRequest &request) {
+std::future<JsonRpcResponse> SseTransport::send_request(const JsonRpcRequest& request) {
   return impl_->send_request(request);
 }
 
-void SseTransport::send_notification(const JsonRpcNotification &notification) {
+void SseTransport::send_notification(const JsonRpcNotification& notification) {
   impl_->send_notification(notification);
 }
 

@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 
 // --- Timestamp helpers ---
 
-static int64_t timestamp_to_epoch(const Timestamp &ts) {
+static int64_t timestamp_to_epoch(const Timestamp& ts) {
   return std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch()).count();
 }
 
@@ -38,7 +38,7 @@ json SessionMeta::to_json() const {
   return j;
 }
 
-SessionMeta SessionMeta::from_json(const json &j) {
+SessionMeta SessionMeta::from_json(const json& j) {
   SessionMeta meta;
   meta.id = j.value("id", "");
   meta.title = j.value("title", "");
@@ -50,7 +50,7 @@ SessionMeta SessionMeta::from_json(const json &j) {
   meta.updated_at = epoch_to_timestamp(j.value("updated_at", int64_t(0)));
 
   if (j.contains("total_usage")) {
-    const auto &u = j["total_usage"];
+    const auto& u = j["total_usage"];
     meta.total_usage.input_tokens = u.value("input_tokens", int64_t(0));
     meta.total_usage.output_tokens = u.value("output_tokens", int64_t(0));
     meta.total_usage.cache_read_tokens = u.value("cache_read_tokens", int64_t(0));
@@ -62,7 +62,7 @@ SessionMeta SessionMeta::from_json(const json &j) {
 
 // --- JsonMessageStore ---
 
-JsonMessageStore::JsonMessageStore(const fs::path &base_dir) : base_dir_(base_dir) {
+JsonMessageStore::JsonMessageStore(const fs::path& base_dir) : base_dir_(base_dir) {
   std::error_code ec;
   fs::create_directories(base_dir_, ec);
   if (ec) {
@@ -72,11 +72,11 @@ JsonMessageStore::JsonMessageStore(const fs::path &base_dir) : base_dir_(base_di
 
 // --- Path helpers ---
 
-fs::path JsonMessageStore::session_dir(const SessionId &id) const {
+fs::path JsonMessageStore::session_dir(const SessionId& id) const {
   return base_dir_ / id;
 }
 
-fs::path JsonMessageStore::messages_file(const SessionId &id) const {
+fs::path JsonMessageStore::messages_file(const SessionId& id) const {
   return session_dir(id) / "messages.json";
 }
 
@@ -86,7 +86,7 @@ fs::path JsonMessageStore::sessions_index_file() const {
 
 // --- Atomic write ---
 
-void JsonMessageStore::atomic_write(const fs::path &path, const std::string &content) {
+void JsonMessageStore::atomic_write(const fs::path& path, const std::string& content) {
   auto tmp_path = path;
   tmp_path += ".tmp";
 
@@ -116,7 +116,7 @@ void JsonMessageStore::atomic_write(const fs::path &path, const std::string &con
 
 // --- Internal: messages.json ---
 
-std::vector<Message> JsonMessageStore::load_messages(const SessionId &session_id) {
+std::vector<Message> JsonMessageStore::load_messages(const SessionId& session_id) {
   auto path = messages_file(session_id);
   if (!fs::exists(path)) {
     return {};
@@ -131,17 +131,17 @@ std::vector<Message> JsonMessageStore::load_messages(const SessionId &session_id
   try {
     json j = json::parse(file);
     std::vector<Message> messages;
-    for (const auto &msg_json : j) {
+    for (const auto& msg_json : j) {
       messages.push_back(Message::from_json(msg_json));
     }
     return messages;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     spdlog::warn("Failed to parse messages file {}: {}", path.string(), e.what());
     return {};
   }
 }
 
-void JsonMessageStore::save_messages(const SessionId &session_id, const std::vector<Message> &messages) {
+void JsonMessageStore::save_messages(const SessionId& session_id, const std::vector<Message>& messages) {
   // Ensure session directory exists
   auto dir = session_dir(session_id);
   std::error_code ec;
@@ -152,7 +152,7 @@ void JsonMessageStore::save_messages(const SessionId &session_id, const std::vec
   }
 
   json j = json::array();
-  for (const auto &msg : messages) {
+  for (const auto& msg : messages) {
     j.push_back(msg.to_json());
   }
 
@@ -175,19 +175,19 @@ std::vector<SessionMeta> JsonMessageStore::load_sessions_index() {
   try {
     json j = json::parse(file);
     std::vector<SessionMeta> sessions;
-    for (const auto &s : j) {
+    for (const auto& s : j) {
       sessions.push_back(SessionMeta::from_json(s));
     }
     return sessions;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     spdlog::warn("Failed to parse sessions index: {}", e.what());
     return {};
   }
 }
 
-void JsonMessageStore::save_sessions_index(const std::vector<SessionMeta> &sessions) {
+void JsonMessageStore::save_sessions_index(const std::vector<SessionMeta>& sessions) {
   json j = json::array();
-  for (const auto &s : sessions) {
+  for (const auto& s : sessions) {
     j.push_back(s.to_json());
   }
   atomic_write(sessions_index_file(), j.dump(2));
@@ -195,7 +195,7 @@ void JsonMessageStore::save_sessions_index(const std::vector<SessionMeta> &sessi
 
 // --- MessageStore interface ---
 
-void JsonMessageStore::save(const Message &msg) {
+void JsonMessageStore::save(const Message& msg) {
   std::lock_guard lock(mutex_);
 
   auto session_id = msg.session_id();
@@ -204,7 +204,7 @@ void JsonMessageStore::save(const Message &msg) {
   save_messages(session_id, messages);
 }
 
-std::optional<Message> JsonMessageStore::get(const MessageId &id) {
+std::optional<Message> JsonMessageStore::get(const MessageId& id) {
   std::lock_guard lock(mutex_);
 
   // Scan all session directories for the message
@@ -212,12 +212,12 @@ std::optional<Message> JsonMessageStore::get(const MessageId &id) {
     return std::nullopt;
   }
 
-  for (const auto &entry : fs::directory_iterator(base_dir_)) {
+  for (const auto& entry : fs::directory_iterator(base_dir_)) {
     if (!entry.is_directory()) continue;
 
     auto session_id = entry.path().filename().string();
     auto messages = load_messages(session_id);
-    for (const auto &msg : messages) {
+    for (const auto& msg : messages) {
       if (msg.id() == id) {
         return msg;
       }
@@ -227,18 +227,18 @@ std::optional<Message> JsonMessageStore::get(const MessageId &id) {
   return std::nullopt;
 }
 
-std::vector<Message> JsonMessageStore::list(const SessionId &session_id) {
+std::vector<Message> JsonMessageStore::list(const SessionId& session_id) {
   std::lock_guard lock(mutex_);
   return load_messages(session_id);
 }
 
-void JsonMessageStore::update(const Message &msg) {
+void JsonMessageStore::update(const Message& msg) {
   std::lock_guard lock(mutex_);
 
   auto session_id = msg.session_id();
   auto messages = load_messages(session_id);
 
-  for (auto &existing : messages) {
+  for (auto& existing : messages) {
     if (existing.id() == msg.id()) {
       existing = msg;
       break;
@@ -248,7 +248,7 @@ void JsonMessageStore::update(const Message &msg) {
   save_messages(session_id, messages);
 }
 
-void JsonMessageStore::remove(const MessageId &id) {
+void JsonMessageStore::remove(const MessageId& id) {
   std::lock_guard lock(mutex_);
 
   // Scan all session directories for the message
@@ -256,12 +256,12 @@ void JsonMessageStore::remove(const MessageId &id) {
     return;
   }
 
-  for (const auto &entry : fs::directory_iterator(base_dir_)) {
+  for (const auto& entry : fs::directory_iterator(base_dir_)) {
     if (!entry.is_directory()) continue;
 
     auto session_id = entry.path().filename().string();
     auto messages = load_messages(session_id);
-    auto it = std::remove_if(messages.begin(), messages.end(), [&id](const Message &msg) {
+    auto it = std::remove_if(messages.begin(), messages.end(), [&id](const Message& msg) {
       return msg.id() == id;
     });
 
@@ -275,14 +275,14 @@ void JsonMessageStore::remove(const MessageId &id) {
 
 // --- Session management ---
 
-void JsonMessageStore::save_session(const SessionMeta &meta) {
+void JsonMessageStore::save_session(const SessionMeta& meta) {
   std::lock_guard lock(mutex_);
 
   auto sessions = load_sessions_index();
 
   // Update existing or append
   bool found = false;
-  for (auto &s : sessions) {
+  for (auto& s : sessions) {
     if (s.id == meta.id) {
       s = meta;
       found = true;
@@ -297,11 +297,11 @@ void JsonMessageStore::save_session(const SessionMeta &meta) {
   save_sessions_index(sessions);
 }
 
-std::optional<SessionMeta> JsonMessageStore::get_session(const SessionId &id) {
+std::optional<SessionMeta> JsonMessageStore::get_session(const SessionId& id) {
   std::lock_guard lock(mutex_);
 
   auto sessions = load_sessions_index();
-  for (const auto &s : sessions) {
+  for (const auto& s : sessions) {
     if (s.id == id) {
       return s;
     }
@@ -315,13 +315,13 @@ std::vector<SessionMeta> JsonMessageStore::list_sessions() {
   return load_sessions_index();
 }
 
-void JsonMessageStore::remove_session(const SessionId &id) {
+void JsonMessageStore::remove_session(const SessionId& id) {
   std::lock_guard lock(mutex_);
 
   // Remove from index
   auto sessions = load_sessions_index();
   sessions.erase(std::remove_if(sessions.begin(), sessions.end(),
-                                [&id](const SessionMeta &s) {
+                                [&id](const SessionMeta& s) {
                                   return s.id == id;
                                 }),
                  sessions.end());

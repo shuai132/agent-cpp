@@ -64,7 +64,7 @@ struct TokenUsage {
     return input_tokens + output_tokens;
   }
 
-  TokenUsage &operator+=(const TokenUsage &other) {
+  TokenUsage& operator+=(const TokenUsage& other) {
     input_tokens += other.input_tokens;
     output_tokens += other.output_tokens;
     cache_read_tokens += other.cache_read_tokens;
@@ -84,7 +84,7 @@ enum class FinishReason {
 
 std::string to_string(FinishReason reason);
 
-FinishReason finish_reason_from_string(const std::string &str);
+FinishReason finish_reason_from_string(const std::string& str);
 
 // Permission levels
 enum class Permission {
@@ -95,7 +95,7 @@ enum class Permission {
 
 std::string to_string(Permission perm);
 
-Permission permission_from_string(const std::string &str);
+Permission permission_from_string(const std::string& str);
 
 // Agent types
 enum class AgentType {
@@ -108,10 +108,10 @@ enum class AgentType {
 
 std::string to_string(AgentType type);
 
-AgentType agent_type_from_string(const std::string &str);
+AgentType agent_type_from_string(const std::string& str);
 
 // Sanitize invalid UTF-8 bytes in a string (replace with U+FFFD)
-std::string sanitize_utf8(const std::string &input);
+std::string sanitize_utf8(const std::string& input);
 
 // Model info
 struct ModelInfo {

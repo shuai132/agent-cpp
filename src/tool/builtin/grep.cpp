@@ -21,7 +21,7 @@ std::vector<ParameterSchema> GrepTool::parameters() const {
           {"include", "string", "File pattern to include (e.g. \"*.js\")", false, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> GrepTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> GrepTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string pattern = args.value("pattern", "");
     std::string search_path = args.value("path", ctx.working_dir);
@@ -39,7 +39,7 @@ std::future<ToolResult> GrepTool::execute(const json &args, const ToolContext &c
     std::regex search_regex;
     try {
       search_regex = std::regex(pattern);
-    } catch (const std::regex_error &e) {
+    } catch (const std::regex_error& e) {
       return ToolResult::error("Invalid regex pattern: " + std::string(e.what()));
     }
 
@@ -48,7 +48,7 @@ std::future<ToolResult> GrepTool::execute(const json &args, const ToolContext &c
     const size_t max_matches = 100;
 
     try {
-      for (const auto &entry : fs::recursive_directory_iterator(base_path)) {
+      for (const auto& entry : fs::recursive_directory_iterator(base_path)) {
         if (!entry.is_regular_file()) continue;
         if (match_count >= max_matches) break;
 
@@ -83,7 +83,7 @@ std::future<ToolResult> GrepTool::execute(const json &args, const ToolContext &c
           }
         }
       }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       return ToolResult::error(std::string("Error searching: ") + e.what());
     }
 

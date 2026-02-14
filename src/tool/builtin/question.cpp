@@ -16,13 +16,13 @@ std::vector<ParameterSchema> QuestionTool::parameters() const {
   return {{"questions", "array", "Array of questions to ask the user (strings)", true, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> QuestionTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> QuestionTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, &ctx]() -> ToolResult {
     auto questions_json = args.value("questions", json::array());
 
     // Extract question strings
     std::vector<std::string> questions;
-    for (const auto &q : questions_json) {
+    for (const auto& q : questions_json) {
       if (q.is_string()) {
         questions.push_back(q.get<std::string>());
       } else if (q.is_object() && q.contains("question")) {
@@ -67,7 +67,7 @@ std::future<ToolResult> QuestionTool::execute(const json &args, const ToolContex
       }
 
       return ToolResult::success(output.str());
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       spdlog::error("question tool: handler error: {}", e.what());
       return ToolResult::error(std::string("Failed to get user response: ") + e.what());
     }

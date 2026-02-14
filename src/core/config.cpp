@@ -7,7 +7,7 @@ namespace agent {
 
 namespace fs = std::filesystem;
 
-Config Config::load(const fs::path &path) {
+Config Config::load(const fs::path& path) {
   Config config;
 
   if (!fs::exists(path)) {
@@ -24,7 +24,7 @@ Config Config::load(const fs::path &path) {
 
     // Load providers
     if (j.contains("providers")) {
-      for (auto &[name, provider_json] : j["providers"].items()) {
+      for (auto& [name, provider_json] : j["providers"].items()) {
         ProviderConfig provider;
         provider.name = name;
         provider.api_key = provider_json.value("api_key", "");
@@ -33,7 +33,7 @@ Config Config::load(const fs::path &path) {
           provider.organization = provider_json["organization"];
         }
         if (provider_json.contains("headers")) {
-          for (auto &[k, v] : provider_json["headers"].items()) {
+          for (auto& [k, v] : provider_json["headers"].items()) {
             provider.headers[k] = v;
           }
         }
@@ -46,7 +46,7 @@ Config Config::load(const fs::path &path) {
 
     // Load MCP servers
     if (j.contains("mcp_servers")) {
-      for (const auto &server_json : j["mcp_servers"]) {
+      for (const auto& server_json : j["mcp_servers"]) {
         McpServerConfig server;
         server.name = server_json.value("name", "");
         server.type = server_json.value("type", "local");
@@ -55,17 +55,17 @@ Config Config::load(const fs::path &path) {
         server.enabled = server_json.value("enabled", true);
 
         if (server_json.contains("args")) {
-          for (const auto &arg : server_json["args"]) {
+          for (const auto& arg : server_json["args"]) {
             server.args.push_back(arg);
           }
         }
         if (server_json.contains("env")) {
-          for (auto &[k, v] : server_json["env"].items()) {
+          for (auto& [k, v] : server_json["env"].items()) {
             server.env[k] = v;
           }
         }
         if (server_json.contains("headers")) {
-          for (auto &[k, v] : server_json["headers"].items()) {
+          for (auto& [k, v] : server_json["headers"].items()) {
             server.headers[k] = v;
           }
         }
@@ -76,7 +76,7 @@ Config Config::load(const fs::path &path) {
 
     // Load agents
     if (j.contains("agents")) {
-      for (auto &[id, agent_json] : j["agents"].items()) {
+      for (auto& [id, agent_json] : j["agents"].items()) {
         AgentConfig agent;
         agent.id = id;
         agent.type = agent_type_from_string(agent_json.value("type", "build"));
@@ -86,17 +86,17 @@ Config Config::load(const fs::path &path) {
         agent.default_permission = permission_from_string(agent_json.value("default_permission", "ask"));
 
         if (agent_json.contains("allowed_tools")) {
-          for (const auto &tool : agent_json["allowed_tools"]) {
+          for (const auto& tool : agent_json["allowed_tools"]) {
             agent.allowed_tools.push_back(tool);
           }
         }
         if (agent_json.contains("denied_tools")) {
-          for (const auto &tool : agent_json["denied_tools"]) {
+          for (const auto& tool : agent_json["denied_tools"]) {
             agent.denied_tools.push_back(tool);
           }
         }
         if (agent_json.contains("permissions")) {
-          for (auto &[tool_id, perm_str] : agent_json["permissions"].items()) {
+          for (auto& [tool_id, perm_str] : agent_json["permissions"].items()) {
             agent.permissions[tool_id] = permission_from_string(perm_str);
           }
         }
@@ -107,7 +107,7 @@ Config Config::load(const fs::path &path) {
 
     // Load context settings
     if (j.contains("context")) {
-      const auto &ctx = j["context"];
+      const auto& ctx = j["context"];
       config.context.prune_protect_tokens = ctx.value("prune_protect_tokens", 40000);
       config.context.prune_minimum_tokens = ctx.value("prune_minimum_tokens", 20000);
       config.context.truncate_max_lines = ctx.value("truncate_max_lines", 2000);
@@ -116,14 +116,14 @@ Config Config::load(const fs::path &path) {
 
     // Load instructions
     if (j.contains("instructions")) {
-      for (const auto &instr : j["instructions"]) {
+      for (const auto& instr : j["instructions"]) {
         config.instructions.push_back(instr);
       }
     }
 
     // Load skill paths
     if (j.contains("skill_paths")) {
-      for (const auto &path : j["skill_paths"]) {
+      for (const auto& path : j["skill_paths"]) {
         config.skill_paths.push_back(path.get<std::string>());
       }
     }
@@ -133,7 +133,7 @@ Config Config::load(const fs::path &path) {
       config.log_file = j["log_file"].get<std::string>();
     }
 
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     // Log error and return default config
   }
 
@@ -155,12 +155,12 @@ Config Config::load_default() {
   return Config{};
 }
 
-void Config::save(const fs::path &path) const {
+void Config::save(const fs::path& path) const {
   json j;
 
   // Save providers
   json providers_json;
-  for (const auto &[name, provider] : providers) {
+  for (const auto& [name, provider] : providers) {
     json p;
     p["api_key"] = provider.api_key;
     p["base_url"] = provider.base_url;
@@ -178,7 +178,7 @@ void Config::save(const fs::path &path) const {
 
   // Save MCP servers
   json servers_json = json::array();
-  for (const auto &server : mcp_servers) {
+  for (const auto& server : mcp_servers) {
     json s;
     s["name"] = server.name;
     s["type"] = server.type;
@@ -194,7 +194,7 @@ void Config::save(const fs::path &path) const {
 
   // Save agents
   json agents_json;
-  for (const auto &[id, agent] : agents) {
+  for (const auto& [id, agent] : agents) {
     json a;
     a["type"] = to_string(agent.type);
     a["model"] = agent.model;
@@ -206,7 +206,7 @@ void Config::save(const fs::path &path) const {
 
     if (!agent.permissions.empty()) {
       json perms;
-      for (const auto &[tool_id, perm] : agent.permissions) {
+      for (const auto& [tool_id, perm] : agent.permissions) {
         perms[tool_id] = to_string(perm);
       }
       a["permissions"] = perms;
@@ -225,7 +225,7 @@ void Config::save(const fs::path &path) const {
   j["instructions"] = instructions;
 
   json skill_paths_json = json::array();
-  for (const auto &p : skill_paths) {
+  for (const auto& p : skill_paths) {
     skill_paths_json.push_back(p.string());
   }
   j["skill_paths"] = skill_paths_json;
@@ -242,7 +242,7 @@ void Config::save(const fs::path &path) const {
   }
 }
 
-std::optional<ProviderConfig> Config::get_provider(const std::string &name) const {
+std::optional<ProviderConfig> Config::get_provider(const std::string& name) const {
   auto it = providers.find(name);
   if (it != providers.end()) {
     return it->second;
@@ -250,7 +250,7 @@ std::optional<ProviderConfig> Config::get_provider(const std::string &name) cons
   return std::nullopt;
 }
 
-std::optional<AgentConfig> Config::get_agent(const AgentId &id) const {
+std::optional<AgentConfig> Config::get_agent(const AgentId& id) const {
   auto it = agents.find(id);
   if (it != agents.end()) {
     return it->second;
@@ -298,12 +298,12 @@ AgentConfig Config::get_or_create_agent(AgentType type) const {
 namespace config_paths {
 
 fs::path home_dir() {
-  const char *home = std::getenv("HOME");
+  const char* home = std::getenv("HOME");
   if (home) {
     return fs::path(home);
   }
 #ifdef _WIN32
-  const char *userprofile = std::getenv("USERPROFILE");
+  const char* userprofile = std::getenv("USERPROFILE");
   if (userprofile) {
     return fs::path(userprofile);
   }
@@ -323,7 +323,7 @@ fs::path project_config_file() {
   return fs::current_path() / ".agent-sdk" / "config.json";
 }
 
-std::optional<fs::path> find_git_root(const fs::path &start_dir) {
+std::optional<fs::path> find_git_root(const fs::path& start_dir) {
   fs::path current = start_dir;
   while (true) {
     if (fs::exists(current / ".git")) {
@@ -336,7 +336,7 @@ std::optional<fs::path> find_git_root(const fs::path &start_dir) {
   return std::nullopt;
 }
 
-std::vector<fs::path> find_agent_instructions(const fs::path &start_dir) {
+std::vector<fs::path> find_agent_instructions(const fs::path& start_dir) {
   std::vector<fs::path> result;
 
   // Determine the boundary: stop at git worktree root or filesystem root
@@ -348,12 +348,12 @@ std::vector<fs::path> find_agent_instructions(const fs::path &start_dir) {
     // AGENTS.md variants take precedence over CLAUDE.md variants.
     // Within each convention, root-level file takes precedence over nested dir file.
     struct {
-      const char *path;
+      const char* path;
     } candidates[] = {
         {"AGENTS.md"}, {".agent-sdk/AGENTS.md"}, {".agents/AGENTS.md"}, {".opencode/AGENTS.md"}, {"CLAUDE.md"}, {".claude/CLAUDE.md"},
     };
 
-    for (const auto &c : candidates) {
+    for (const auto& c : candidates) {
       auto candidate = current / c.path;
       if (fs::exists(candidate)) {
         result.push_back(candidate);

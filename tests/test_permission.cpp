@@ -124,8 +124,8 @@ TEST_F(PermissionTest, ClearCache) {
 }
 
 TEST_F(PermissionTest, Singleton) {
-  auto &a = PermissionManager::instance();
-  auto &b = PermissionManager::instance();
+  auto& a = PermissionManager::instance();
+  auto& b = PermissionManager::instance();
 
   EXPECT_EQ(&a, &b);
 }

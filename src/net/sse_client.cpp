@@ -7,12 +7,12 @@ namespace agent::net {
 
 class SseClient::Impl {
  public:
-  explicit Impl(asio::io_context &io_ctx) : io_ctx_(io_ctx), ssl_ctx_(asio::ssl::context::tlsv12_client), resolver_(io_ctx) {
+  explicit Impl(asio::io_context& io_ctx) : io_ctx_(io_ctx), ssl_ctx_(asio::ssl::context::tlsv12_client), resolver_(io_ctx) {
     ssl_ctx_.set_default_verify_paths();
   }
 
-  void connect(const std::string &url, const std::map<std::string, std::string> &headers, std::function<void(const SseEvent &)> on_event,
-               std::function<void(const std::string &)> on_error, std::function<void()> on_complete) {
+  void connect(const std::string& url, const std::map<std::string, std::string>& headers, std::function<void(const SseEvent&)> on_event,
+               std::function<void(const std::string&)> on_error, std::function<void()> on_complete) {
     on_event_ = std::move(on_event);
     on_error_ = std::move(on_error);
     on_complete_ = std::move(on_complete);
@@ -40,7 +40,7 @@ class SseClient::Impl {
     req << "Cache-Control: no-cache\r\n";
     req << "Connection: keep-alive\r\n";
 
-    for (const auto &[key, value] : headers) {
+    for (const auto& [key, value] : headers) {
       req << key << ": " << value << "\r\n";
     }
 
@@ -73,24 +73,24 @@ class SseClient::Impl {
   }
 
  private:
-  void connect_https(const std::string &host, const std::string &port) {
+  void connect_https(const std::string& host, const std::string& port) {
     ssl_socket_ = std::make_unique<asio::ssl::stream<asio::ip::tcp::socket>>(io_ctx_, ssl_ctx_);
 
     SSL_set_tlsext_host_name(ssl_socket_->native_handle(), host.c_str());
 
-    resolver_.async_resolve(host, port, [this](const asio::error_code &ec, auto results) {
+    resolver_.async_resolve(host, port, [this](const asio::error_code& ec, auto results) {
       if (ec || stopped_) {
         if (on_error_) on_error_("DNS resolution failed: " + ec.message());
         return;
       }
 
-      asio::async_connect(ssl_socket_->lowest_layer(), results, [this](const asio::error_code &ec, auto) {
+      asio::async_connect(ssl_socket_->lowest_layer(), results, [this](const asio::error_code& ec, auto) {
         if (ec || stopped_) {
           if (on_error_) on_error_("Connection failed: " + ec.message());
           return;
         }
 
-        ssl_socket_->async_handshake(asio::ssl::stream_base::client, [this](const asio::error_code &ec) {
+        ssl_socket_->async_handshake(asio::ssl::stream_base::client, [this](const asio::error_code& ec) {
           if (ec || stopped_) {
             if (on_error_) on_error_("SSL handshake failed: " + ec.message());
             return;
@@ -103,16 +103,16 @@ class SseClient::Impl {
     });
   }
 
-  void connect_http(const std::string &host, const std::string &port) {
+  void connect_http(const std::string& host, const std::string& port) {
     tcp_socket_ = std::make_unique<asio::ip::tcp::socket>(io_ctx_);
 
-    resolver_.async_resolve(host, port, [this](const asio::error_code &ec, auto results) {
+    resolver_.async_resolve(host, port, [this](const asio::error_code& ec, auto results) {
       if (ec || stopped_) {
         if (on_error_) on_error_("DNS resolution failed: " + ec.message());
         return;
       }
 
-      asio::async_connect(*tcp_socket_, results, [this](const asio::error_code &ec, auto) {
+      asio::async_connect(*tcp_socket_, results, [this](const asio::error_code& ec, auto) {
         if (ec || stopped_) {
           if (on_error_) on_error_("Connection failed: " + ec.message());
           return;
@@ -125,7 +125,7 @@ class SseClient::Impl {
   }
 
   void send_request_ssl() {
-    asio::async_write(*ssl_socket_, asio::buffer(request_), [this](const asio::error_code &ec, size_t) {
+    asio::async_write(*ssl_socket_, asio::buffer(request_), [this](const asio::error_code& ec, size_t) {
       if (ec || stopped_) {
         if (on_error_) on_error_("Write failed: " + ec.message());
         return;
@@ -135,7 +135,7 @@ class SseClient::Impl {
   }
 
   void send_request_tcp() {
-    asio::async_write(*tcp_socket_, asio::buffer(request_), [this](const asio::error_code &ec, size_t) {
+    asio::async_write(*tcp_socket_, asio::buffer(request_), [this](const asio::error_code& ec, size_t) {
       if (ec || stopped_) {
         if (on_error_) on_error_("Write failed: " + ec.message());
         return;
@@ -145,7 +145,7 @@ class SseClient::Impl {
   }
 
   void read_headers_ssl() {
-    asio::async_read_until(*ssl_socket_, buffer_, "\r\n\r\n", [this](const asio::error_code &ec, size_t) {
+    asio::async_read_until(*ssl_socket_, buffer_, "\r\n\r\n", [this](const asio::error_code& ec, size_t) {
       if (ec || stopped_) {
         if (on_error_) on_error_("Read headers failed: " + ec.message());
         return;
@@ -156,7 +156,7 @@ class SseClient::Impl {
   }
 
   void read_headers_tcp() {
-    asio::async_read_until(*tcp_socket_, buffer_, "\r\n\r\n", [this](const asio::error_code &ec, size_t) {
+    asio::async_read_until(*tcp_socket_, buffer_, "\r\n\r\n", [this](const asio::error_code& ec, size_t) {
       if (ec || stopped_) {
         if (on_error_) on_error_("Read headers failed: " + ec.message());
         return;
@@ -175,7 +175,7 @@ class SseClient::Impl {
   }
 
   void read_events_ssl() {
-    asio::async_read_until(*ssl_socket_, buffer_, "\n\n", [this](const asio::error_code &ec, size_t bytes) {
+    asio::async_read_until(*ssl_socket_, buffer_, "\n\n", [this](const asio::error_code& ec, size_t bytes) {
       if (stopped_) return;
 
       if (ec == asio::error::eof) {
@@ -194,7 +194,7 @@ class SseClient::Impl {
   }
 
   void read_events_tcp() {
-    asio::async_read_until(*tcp_socket_, buffer_, "\n\n", [this](const asio::error_code &ec, size_t bytes) {
+    asio::async_read_until(*tcp_socket_, buffer_, "\n\n", [this](const asio::error_code& ec, size_t bytes) {
       if (stopped_) return;
 
       if (ec == asio::error::eof) {
@@ -258,7 +258,7 @@ class SseClient::Impl {
     }
   }
 
-  asio::io_context &io_ctx_;
+  asio::io_context& io_ctx_;
   asio::ssl::context ssl_ctx_;
   asio::ip::tcp::resolver resolver_;
 
@@ -268,20 +268,20 @@ class SseClient::Impl {
   asio::streambuf buffer_;
   std::string request_;
 
-  std::function<void(const SseEvent &)> on_event_;
-  std::function<void(const std::string &)> on_error_;
+  std::function<void(const SseEvent&)> on_event_;
+  std::function<void(const std::string&)> on_error_;
   std::function<void()> on_complete_;
 
   std::atomic<bool> connected_{false};
   std::atomic<bool> stopped_{false};
 };
 
-SseClient::SseClient(asio::io_context &io_ctx) : impl_(std::make_unique<Impl>(io_ctx)) {}
+SseClient::SseClient(asio::io_context& io_ctx) : impl_(std::make_unique<Impl>(io_ctx)) {}
 
 SseClient::~SseClient() = default;
 
-void SseClient::connect(const std::string &url, const std::map<std::string, std::string> &headers, std::function<void(const SseEvent &)> on_event,
-                        std::function<void(const std::string &)> on_error, std::function<void()> on_complete) {
+void SseClient::connect(const std::string& url, const std::map<std::string, std::string>& headers, std::function<void(const SseEvent&)> on_event,
+                        std::function<void(const std::string&)> on_error, std::function<void()> on_complete) {
   impl_->connect(url, headers, std::move(on_event), std::move(on_error), std::move(on_complete));
 }
 

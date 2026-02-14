@@ -16,7 +16,7 @@ std::vector<ParameterSchema> TaskTool::parameters() const {
           {"task_id", "string", "Resume a previous task session", false, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> TaskTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> TaskTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string prompt = args.value("prompt", "");
     std::string description = args.value("description", "");
@@ -47,7 +47,7 @@ std::future<ToolResult> TaskTool::execute(const json &args, const ToolContext &c
     auto completion_future = completion_promise.get_future();
 
     // Set up callbacks to capture the response
-    child_session->on_stream([&response_text](const std::string &text) {
+    child_session->on_stream([&response_text](const std::string& text) {
       response_text += text;
     });
 
@@ -55,7 +55,7 @@ std::future<ToolResult> TaskTool::execute(const json &args, const ToolContext &c
       completion_promise.set_value();
     });
 
-    child_session->on_error([&response_text, &completion_promise](const std::string &error) {
+    child_session->on_error([&response_text, &completion_promise](const std::string& error) {
       response_text = "Error: " + error;
       completion_promise.set_value();
     });

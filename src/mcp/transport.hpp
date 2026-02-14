@@ -32,7 +32,7 @@ struct JsonRpcResponse {
 
   std::string error_message() const;
 
-  static JsonRpcResponse from_json(const json &j);
+  static JsonRpcResponse from_json(const json& j);
 };
 
 struct JsonRpcNotification {
@@ -53,13 +53,13 @@ class Transport {
   virtual ~Transport() = default;
 
   // Send a JSON-RPC request and wait for response
-  virtual std::future<JsonRpcResponse> send_request(const JsonRpcRequest &request) = 0;
+  virtual std::future<JsonRpcResponse> send_request(const JsonRpcRequest& request) = 0;
 
   // Send a notification (no response expected)
-  virtual void send_notification(const JsonRpcNotification &notification) = 0;
+  virtual void send_notification(const JsonRpcNotification& notification) = 0;
 
   // Set handler for incoming notifications from server
-  using NotificationHandler = std::function<void(const std::string &method, const json &params)>;
+  using NotificationHandler = std::function<void(const std::string& method, const json& params)>;
   virtual void set_notification_handler(NotificationHandler handler) = 0;
 
   // Lifecycle
@@ -79,8 +79,8 @@ class StdioTransport : public Transport {
   StdioTransport(std::string command, std::vector<std::string> args, std::map<std::string, std::string> env = {});
   ~StdioTransport() override;
 
-  std::future<JsonRpcResponse> send_request(const JsonRpcRequest &request) override;
-  void send_notification(const JsonRpcNotification &notification) override;
+  std::future<JsonRpcResponse> send_request(const JsonRpcRequest& request) override;
+  void send_notification(const JsonRpcNotification& notification) override;
   void set_notification_handler(NotificationHandler handler) override;
 
   std::future<bool> connect() override;
@@ -98,8 +98,8 @@ class SseTransport : public Transport {
   SseTransport(std::string url, std::map<std::string, std::string> headers = {});
   ~SseTransport() override;
 
-  std::future<JsonRpcResponse> send_request(const JsonRpcRequest &request) override;
-  void send_notification(const JsonRpcNotification &notification) override;
+  std::future<JsonRpcResponse> send_request(const JsonRpcRequest& request) override;
+  void send_notification(const JsonRpcNotification& notification) override;
   void set_notification_handler(NotificationHandler handler) override;
 
   std::future<bool> connect() override;

@@ -40,7 +40,7 @@ std::string to_string(ClientState state);
 // MCP client — manages connection to a single MCP server
 class McpClient {
  public:
-  explicit McpClient(const McpServerConfig &config);
+  explicit McpClient(const McpServerConfig& config);
   ~McpClient();
 
   // Lifecycle
@@ -52,16 +52,16 @@ class McpClient {
   bool is_ready() const {
     return state() == ClientState::Ready;
   }
-  const std::string &server_name() const {
+  const std::string& server_name() const {
     return config_.name;
   }
 
   // Tool operations
   std::vector<McpToolInfo> list_tools();
-  std::future<json> call_tool(const std::string &name, const json &arguments);
+  std::future<json> call_tool(const std::string& name, const json& arguments);
 
   // Server info
-  const ServerCapabilities &capabilities() const {
+  const ServerCapabilities& capabilities() const {
     return capabilities_;
   }
 
@@ -80,10 +80,10 @@ class McpClient {
 // McpToolBridge — wraps an MCP tool as a local Tool for ToolRegistry
 class McpToolBridge : public SimpleTool {
  public:
-  McpToolBridge(std::shared_ptr<McpClient> client, const McpToolInfo &tool_info);
+  McpToolBridge(std::shared_ptr<McpClient> client, const McpToolInfo& tool_info);
 
   std::vector<ParameterSchema> parameters() const override;
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 
  private:
   std::shared_ptr<McpClient> client_;
@@ -93,10 +93,10 @@ class McpToolBridge : public SimpleTool {
 // McpManager — singleton that manages all MCP server connections
 class McpManager {
  public:
-  static McpManager &instance();
+  static McpManager& instance();
 
   // Initialize all MCP servers from config
-  void initialize(const std::vector<McpServerConfig> &servers);
+  void initialize(const std::vector<McpServerConfig>& servers);
 
   // Connect to all enabled servers
   void connect_all();
@@ -105,7 +105,7 @@ class McpManager {
   void disconnect_all();
 
   // Get a client by server name
-  std::shared_ptr<McpClient> get_client(const std::string &name) const;
+  std::shared_ptr<McpClient> get_client(const std::string& name) const;
 
   // Get all connected clients
   std::vector<std::shared_ptr<McpClient>> all_clients() const;

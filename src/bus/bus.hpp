@@ -16,17 +16,17 @@ class Bus {
  public:
   using SubscriptionId = uint64_t;
 
-  static Bus &instance();
+  static Bus& instance();
 
   // Subscribe to events of type T
   template <typename T>
-  SubscriptionId subscribe(std::function<void(const T &)> handler) {
+  SubscriptionId subscribe(std::function<void(const T&)> handler) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto id = next_id_++;
     auto type_idx = std::type_index(typeid(T));
 
-    handlers_[type_idx].push_back({id, [handler](const std::any &event) {
-                                     handler(std::any_cast<const T &>(event));
+    handlers_[type_idx].push_back({id, [handler](const std::any& event) {
+                                     handler(std::any_cast<const T&>(event));
                                    }});
 
     return id;
@@ -37,15 +37,15 @@ class Bus {
 
   // Publish an event
   template <typename T>
-  void publish(const T &event) {
-    std::vector<std::function<void(const std::any &)>> to_call;
+  void publish(const T& event) {
+    std::vector<std::function<void(const std::any&)>> to_call;
 
     {
       std::lock_guard<std::mutex> lock(mutex_);
       auto type_idx = std::type_index(typeid(T));
       auto it = handlers_.find(type_idx);
       if (it != handlers_.end()) {
-        for (const auto &entry : it->second) {
+        for (const auto& entry : it->second) {
           to_call.push_back(entry.handler);
         }
       }
@@ -53,7 +53,7 @@ class Bus {
 
     // Call handlers outside the lock
     std::any wrapped = event;
-    for (const auto &handler : to_call) {
+    for (const auto& handler : to_call) {
       handler(wrapped);
     }
   }
@@ -63,7 +63,7 @@ class Bus {
 
   struct HandlerEntry {
     SubscriptionId id;
-    std::function<void(const std::any &)> handler;
+    std::function<void(const std::any&)> handler;
   };
 
   std::mutex mutex_;

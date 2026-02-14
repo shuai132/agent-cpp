@@ -39,16 +39,16 @@ struct ToolContext {
   std::shared_ptr<std::atomic<bool>> abort_signal;
 
   // Permission checker callback
-  std::function<std::future<bool>(const std::string &permission, const std::string &description)> ask_permission;
+  std::function<std::future<bool>(const std::string& permission, const std::string& description)> ask_permission;
 
   // Progress callback
-  std::function<void(const std::string &status)> on_progress;
+  std::function<void(const std::string& status)> on_progress;
 
   // Create child session callback (for Task tool)
   std::function<std::shared_ptr<Session>(AgentType)> create_child_session;
 
   // Question handler callback (for Question tool)
-  std::function<std::future<QuestionResponse>(const QuestionInfo &info)> question_handler;
+  std::function<std::future<QuestionResponse>(const QuestionInfo& info)> question_handler;
 };
 
 // Tool execution result
@@ -59,15 +59,15 @@ struct ToolResult {
   bool is_error = false;
 
   // Factory methods
-  static ToolResult success(const std::string &output) {
+  static ToolResult success(const std::string& output) {
     return ToolResult{output, std::nullopt, json::object(), false};
   }
 
-  static ToolResult error(const std::string &message) {
+  static ToolResult error(const std::string& message) {
     return ToolResult{message, std::nullopt, json::object(), true};
   }
 
-  static ToolResult with_title(const std::string &output, const std::string &title) {
+  static ToolResult with_title(const std::string& output, const std::string& title) {
     return ToolResult{output, title, json::object(), false};
   }
 };
@@ -98,13 +98,13 @@ class Tool {
   virtual std::vector<ParameterSchema> parameters() const = 0;
 
   // Execution
-  virtual std::future<ToolResult> execute(const json &args, const ToolContext &ctx) = 0;
+  virtual std::future<ToolResult> execute(const json& args, const ToolContext& ctx) = 0;
 
   // Generate JSON Schema for tool
   json to_json_schema() const;
 
   // Validate arguments
-  Result<json> validate_args(const json &args) const;
+  Result<json> validate_args(const json& args) const;
 };
 
 // Base class for simpler tool implementation
@@ -128,22 +128,22 @@ class SimpleTool : public Tool {
 // Tool registry
 class ToolRegistry {
  public:
-  static ToolRegistry &instance();
+  static ToolRegistry& instance();
 
   // Register a tool
   void register_tool(std::shared_ptr<Tool> tool);
 
   // Unregister a tool
-  void unregister_tool(const std::string &id);
+  void unregister_tool(const std::string& id);
 
   // Get a tool by ID
-  std::shared_ptr<Tool> get(const std::string &id) const;
+  std::shared_ptr<Tool> get(const std::string& id) const;
 
   // Get all tools
   std::vector<std::shared_ptr<Tool>> all() const;
 
   // Get tools filtered by agent config
-  std::vector<std::shared_ptr<Tool>> for_agent(const AgentConfig &agent) const;
+  std::vector<std::shared_ptr<Tool>> for_agent(const AgentConfig& agent) const;
 
   // Initialize builtin tools
   void init_builtins();
@@ -164,10 +164,10 @@ struct TruncateResult {
 };
 
 // Truncate output if too large
-TruncateResult output(const std::string &text, size_t max_lines = 2000, size_t max_bytes = 51200);
+TruncateResult output(const std::string& text, size_t max_lines = 2000, size_t max_bytes = 51200);
 
 // Save full output to file and return truncated version
-TruncateResult save_and_truncate(const std::string &text, const std::string &tool_name, size_t max_lines = 2000, size_t max_bytes = 51200);
+TruncateResult save_and_truncate(const std::string& text, const std::string& tool_name, size_t max_lines = 2000, size_t max_bytes = 51200);
 }  // namespace Truncate
 
 }  // namespace agent

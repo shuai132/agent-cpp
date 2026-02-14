@@ -78,24 +78,24 @@ enum class Role { System, User, Assistant };
 
 std::string to_string(Role role);
 
-Role role_from_string(const std::string &str);
+Role role_from_string(const std::string& str);
 
 // Message class
 class Message {
  public:
   Message() = default;
 
-  Message(Role role, const std::string &content);
+  Message(Role role, const std::string& content);
 
   // Factory methods
-  static Message system(const std::string &content);
+  static Message system(const std::string& content);
 
-  static Message user(const std::string &content);
+  static Message user(const std::string& content);
 
-  static Message assistant(const std::string &content);
+  static Message assistant(const std::string& content);
 
   // Accessors
-  const MessageId &id() const {
+  const MessageId& id() const {
     return id_;
   }
 
@@ -103,29 +103,29 @@ class Message {
     return role_;
   }
 
-  const std::vector<MessagePart> &parts() const {
+  const std::vector<MessagePart>& parts() const {
     return parts_;
   }
 
-  std::vector<MessagePart> &parts() {
+  std::vector<MessagePart>& parts() {
     return parts_;
   }
 
   // Parent message (for threading)
-  const std::optional<MessageId> &parent_id() const {
+  const std::optional<MessageId>& parent_id() const {
     return parent_id_;
   }
 
-  void set_parent_id(const MessageId &id) {
+  void set_parent_id(const MessageId& id) {
     parent_id_ = id;
   }
 
   // Session association
-  const SessionId &session_id() const {
+  const SessionId& session_id() const {
     return session_id_;
   }
 
-  void set_session_id(const SessionId &id) {
+  void set_session_id(const SessionId& id) {
     session_id_ = id;
   }
 
@@ -147,11 +147,11 @@ class Message {
   }
 
   // Token tracking
-  const TokenUsage &usage() const {
+  const TokenUsage& usage() const {
     return usage_;
   }
 
-  void set_usage(const TokenUsage &usage) {
+  void set_usage(const TokenUsage& usage) {
     usage_ = usage;
   }
 
@@ -181,29 +181,29 @@ class Message {
   // Part manipulation
   void add_part(MessagePart part);
 
-  void add_text(const std::string &text);
+  void add_text(const std::string& text);
 
-  void add_tool_call(const std::string &id, const std::string &name, const json &args);
+  void add_tool_call(const std::string& id, const std::string& name, const json& args);
 
-  void add_tool_result(const std::string &call_id, const std::string &name, const std::string &output, bool is_error = false);
+  void add_tool_result(const std::string& call_id, const std::string& name, const std::string& output, bool is_error = false);
 
   // Get text content (concatenated)
   std::string text() const;
 
   // Get tool calls from this message
-  std::vector<ToolCallPart *> tool_calls();
+  std::vector<ToolCallPart*> tool_calls();
 
-  std::vector<const ToolCallPart *> tool_calls() const;
+  std::vector<const ToolCallPart*> tool_calls() const;
 
   // Get tool results from this message
-  std::vector<ToolResultPart *> tool_results();
+  std::vector<ToolResultPart*> tool_results();
 
-  std::vector<const ToolResultPart *> tool_results() const;
+  std::vector<const ToolResultPart*> tool_results() const;
 
   // Serialization
   json to_json() const;
 
-  static Message from_json(const json &j);
+  static Message from_json(const json& j);
 
   // Convert to LLM API format
   json to_api_format() const;
@@ -231,29 +231,29 @@ class MessageStore {
  public:
   virtual ~MessageStore() = default;
 
-  virtual void save(const Message &msg) = 0;
+  virtual void save(const Message& msg) = 0;
 
-  virtual std::optional<Message> get(const MessageId &id) = 0;
+  virtual std::optional<Message> get(const MessageId& id) = 0;
 
-  virtual std::vector<Message> list(const SessionId &session_id) = 0;
+  virtual std::vector<Message> list(const SessionId& session_id) = 0;
 
-  virtual void update(const Message &msg) = 0;
+  virtual void update(const Message& msg) = 0;
 
-  virtual void remove(const MessageId &id) = 0;
+  virtual void remove(const MessageId& id) = 0;
 };
 
 // In-memory message store
 class InMemoryMessageStore : public MessageStore {
  public:
-  void save(const Message &msg) override;
+  void save(const Message& msg) override;
 
-  std::optional<Message> get(const MessageId &id) override;
+  std::optional<Message> get(const MessageId& id) override;
 
-  std::vector<Message> list(const SessionId &session_id) override;
+  std::vector<Message> list(const SessionId& session_id) override;
 
-  void update(const Message &msg) override;
+  void update(const Message& msg) override;
 
-  void remove(const MessageId &id) override;
+  void remove(const MessageId& id) override;
 
  private:
   mutable std::mutex mutex_;

@@ -18,7 +18,7 @@ std::string to_string(FinishReason reason) {
   return "unknown";
 }
 
-FinishReason finish_reason_from_string(const std::string &str) {
+FinishReason finish_reason_from_string(const std::string& str) {
   if (str == "stop" || str == "end_turn") return FinishReason::Stop;
   if (str == "tool_calls" || str == "tool_use") return FinishReason::ToolCalls;
   if (str == "length" || str == "max_tokens") return FinishReason::Length;
@@ -39,7 +39,7 @@ std::string to_string(Permission perm) {
   return "ask";
 }
 
-Permission permission_from_string(const std::string &str) {
+Permission permission_from_string(const std::string& str) {
   if (str == "allow") return Permission::Allow;
   if (str == "deny") return Permission::Deny;
   if (str == "ask") return Permission::Ask;
@@ -62,7 +62,7 @@ std::string to_string(AgentType type) {
   return "build";
 }
 
-AgentType agent_type_from_string(const std::string &str) {
+AgentType agent_type_from_string(const std::string& str) {
   if (str == "build") return AgentType::Build;
   if (str == "explore") return AgentType::Explore;
   if (str == "general") return AgentType::General;
@@ -71,7 +71,7 @@ AgentType agent_type_from_string(const std::string &str) {
   return AgentType::Build;
 }
 
-std::string sanitize_utf8(const std::string &input) {
+std::string sanitize_utf8(const std::string& input) {
   std::string output;
   output.reserve(input.size());
 

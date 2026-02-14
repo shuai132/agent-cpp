@@ -34,7 +34,7 @@ std::string to_string(SessionState state) {
   return "unknown";
 }
 
-Session::Session(asio::io_context &io_ctx, const Config &config, AgentType agent_type, std::shared_ptr<MessageStore> store)
+Session::Session(asio::io_context& io_ctx, const Config& config, AgentType agent_type, std::shared_ptr<MessageStore> store)
     : io_ctx_(io_ctx),
       config_(config),
       agent_config_(config.get_or_create_agent(agent_type)),
@@ -55,7 +55,7 @@ Session::Session(asio::io_context &io_ctx, const Config &config, AgentType agent
     provider_order = {"anthropic", "openai"};
   }
 
-  for (const auto &provider_name : provider_order) {
+  for (const auto& provider_name : provider_order) {
     auto provider_config = config.get_provider(provider_name);
     if (provider_config) {
       provider_ = llm::ProviderFactory::instance().create(provider_name, *provider_config, io_ctx);
@@ -67,7 +67,7 @@ Session::Session(asio::io_context &io_ctx, const Config &config, AgentType agent
   auto instruction_files = config_paths::find_agent_instructions(config.working_dir);
   if (!instruction_files.empty()) {
     std::string injected;
-    for (const auto &file : instruction_files) {
+    for (const auto& file : instruction_files) {
       std::ifstream ifs(file);
       if (!ifs.is_open()) continue;
 
@@ -95,7 +95,7 @@ Session::~Session() {
   cancel();
 }
 
-std::shared_ptr<Session> Session::create(asio::io_context &io_ctx, const Config &config, AgentType agent_type, std::shared_ptr<MessageStore> store) {
+std::shared_ptr<Session> Session::create(asio::io_context& io_ctx, const Config& config, AgentType agent_type, std::shared_ptr<MessageStore> store) {
   auto session = std::shared_ptr<Session>(new Session(io_ctx, config, agent_type, std::move(store)));
 
   Bus::instance().publish(events::SessionCreated{session->id()});
@@ -115,7 +115,7 @@ void Session::add_message(Message msg) {
   msg.set_session_id(id_);
   messages_.push_back(std::move(msg));
 
-  const auto &added = messages_.back();
+  const auto& added = messages_.back();
 
   // Persist to store
   if (store_) {
@@ -161,10 +161,10 @@ std::vector<Message> Session::get_context_messages() const {
 int64_t Session::estimated_context_tokens() const {
   // Rough estimation: 4 chars per token
   int64_t total = 0;
-  for (const auto &msg : messages_) {
+  for (const auto& msg : messages_) {
     total += msg.text().size() / 4;
-    for (const auto &part : msg.parts()) {
-      if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+    for (const auto& part : msg.parts()) {
+      if (auto* tr = std::get_if<ToolResultPart>(&part)) {
         if (!tr->compacted) {
           total += tr->output.size() / 4;
         }
@@ -174,7 +174,7 @@ int64_t Session::estimated_context_tokens() const {
   return total;
 }
 
-void Session::prompt(const std::string &text) {
+void Session::prompt(const std::string& text) {
   prompt(Message::user(text));
 }
 
@@ -192,7 +192,7 @@ void Session::cancel() {
   }
 
   // Cancel child sessions
-  for (auto &weak_child : children_) {
+  for (auto& weak_child : children_) {
     if (auto child = weak_child.lock()) {
       child->cancel();
     }
@@ -213,7 +213,7 @@ void Session::run_loop() {
     auto context_msgs = get_context_messages();
 
     // Find last assistant message
-    const Message *last_assistant = nullptr;
+    const Message* last_assistant = nullptr;
     for (auto it = context_msgs.rbegin(); it != context_msgs.rend(); ++it) {
       if (it->role() == Role::Assistant) {
         last_assistant = &(*it);
@@ -247,7 +247,7 @@ void Session::run_loop() {
 
     // Check if the new response has tool calls
     if (!messages_.empty() && messages_.back().role() == Role::Assistant) {
-      auto &new_assistant = messages_.back();
+      auto& new_assistant = messages_.back();
       if (new_assistant.finish_reason() == FinishReason::ToolCalls) {
         execute_tool_calls();
       }
@@ -287,7 +287,7 @@ void Session::process_stream() {
   request.messages = get_context_messages();
 
   // Get available tools
-  for (const auto &tool : ToolRegistry::instance().for_agent(agent_config_)) {
+  for (const auto& tool : ToolRegistry::instance().for_agent(agent_config_)) {
     request.tools.push_back(tool);
   }
 
@@ -311,9 +311,9 @@ void Session::process_stream() {
 
   provider_->stream(
       request,
-      [this, &accumulated_text, &usage, &finish_reason, &error_message, &tool_call_builders](const llm::StreamEvent &event) {
+      [this, &accumulated_text, &usage, &finish_reason, &error_message, &tool_call_builders](const llm::StreamEvent& event) {
         std::visit(
-            [this, &accumulated_text, &usage, &finish_reason, &error_message, &tool_call_builders](auto &&e) {
+            [this, &accumulated_text, &usage, &finish_reason, &error_message, &tool_call_builders](auto&& e) {
               using T = std::decay_t<decltype(e)>;
 
               if constexpr (std::is_same_v<T, llm::TextDelta>) {
@@ -326,7 +326,7 @@ void Session::process_stream() {
                 // Find existing builder by id and accumulate, or create new
                 bool found_builder = false;
                 if (!e.id.empty()) {
-                  for (auto &builder : tool_call_builders) {
+                  for (auto& builder : tool_call_builders) {
                     if (builder.id == e.id) {
                       builder.args_json += e.arguments_delta;
                       found_builder = true;
@@ -341,7 +341,7 @@ void Session::process_stream() {
                 // Tool call arguments completed
                 // Find matching builder by id and update with complete args
                 bool found = false;
-                for (auto &builder : tool_call_builders) {
+                for (auto& builder : tool_call_builders) {
                   if (!e.id.empty() && builder.id == e.id) {
                     // Update with complete args
                     builder.args_json = e.arguments.dump();
@@ -396,7 +396,7 @@ void Session::process_stream() {
   }
 
   // Add all tool calls
-  for (const auto &builder : tool_call_builders) {
+  for (const auto& builder : tool_call_builders) {
     try {
       json args = json::parse(builder.args_json);
       if (!args.is_object()) {
@@ -424,7 +424,7 @@ void Session::process_stream() {
 void Session::execute_tool_calls() {
   if (messages_.empty()) return;
 
-  auto &last_msg = messages_.back();
+  auto& last_msg = messages_.back();
   if (last_msg.role() != Role::Assistant) return;
 
   auto tool_calls = last_msg.tool_calls();
@@ -435,7 +435,7 @@ void Session::execute_tool_calls() {
   // Create user message for tool results
   Message result_msg(Role::User, "");
 
-  for (auto *tc : tool_calls) {
+  for (auto* tc : tool_calls) {
     if (tc->completed) continue;
 
     // Check for doom loop
@@ -466,7 +466,7 @@ void Session::execute_tool_calls() {
         try {
           auto future = permission_handler_(tc->name, "Tool '" + tc->name + "' requires permission to execute");
           allowed = future.get();
-        } catch (const std::exception &e) {
+        } catch (const std::exception& e) {
           spdlog::warn("Permission handler error for tool {}: {}", tc->name, e.what());
           allowed = false;
         }
@@ -518,7 +518,7 @@ void Session::execute_tool_calls() {
 
       Bus::instance().publish(events::ToolCallCompleted{id_, tc->id, tc->name, !result.is_error});
 
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       std::string error_msg = std::string("Error: ") + e.what();
       result_msg.add_tool_result(tc->id, tc->name, error_msg, true);
 
@@ -646,7 +646,7 @@ std::vector<Message> Session::collect_messages_for_compaction() const {
   if (result.empty()) return {};
 
   std::string conversation_text;
-  for (const auto &msg : result) {
+  for (const auto& msg : result) {
     if (msg.role() == Role::System) continue;
 
     if (msg.is_summary()) {
@@ -662,12 +662,12 @@ std::vector<Message> Session::collect_messages_for_compaction() const {
     }
 
     // Include tool calls briefly
-    for (const auto *tc : msg.tool_calls()) {
+    for (const auto* tc : msg.tool_calls()) {
       conversation_text += "[Tool call: " + tc->name + "(" + tc->arguments.dump() + ")]\n";
     }
 
     // Include tool results briefly (skip compacted ones)
-    for (const auto *tr : msg.tool_results()) {
+    for (const auto* tr : msg.tool_results()) {
       if (tr->compacted) {
         conversation_text += "[Tool result: " + tr->tool_name + " (content cleared)]\n";
       } else {
@@ -686,7 +686,7 @@ std::vector<Message> Session::collect_messages_for_compaction() const {
   return compaction_messages;
 }
 
-std::string Session::stream_compaction(const llm::LlmRequest &request) {
+std::string Session::stream_compaction(const llm::LlmRequest& request) {
   std::promise<void> done;
   auto done_future = done.get_future();
 
@@ -695,9 +695,9 @@ std::string Session::stream_compaction(const llm::LlmRequest &request) {
 
   provider_->stream(
       request,
-      [&accumulated_text, &error_message](const llm::StreamEvent &event) {
+      [&accumulated_text, &error_message](const llm::StreamEvent& event) {
         std::visit(
-            [&accumulated_text, &error_message](auto &&e) {
+            [&accumulated_text, &error_message](auto&& e) {
               using T = std::decay_t<decltype(e)>;
               if constexpr (std::is_same_v<T, llm::TextDelta>) {
                 accumulated_text += e.text;
@@ -734,13 +734,13 @@ void Session::prune_old_outputs() {
   int64_t pruned = 0;
 
   // Track messages that were modified for store sync
-  std::vector<const Message *> modified_messages;
+  std::vector<const Message*> modified_messages;
 
   // Scan from newest to oldest
   for (auto it = messages_.rbegin(); it != messages_.rend(); ++it) {
     bool modified = false;
-    for (auto &part : it->parts()) {
-      if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+    for (auto& part : it->parts()) {
+      if (auto* tr = std::get_if<ToolResultPart>(&part)) {
         int64_t part_tokens = tr->output.size() / 4;
 
         if (accumulated < protect_tokens) {
@@ -765,7 +765,7 @@ void Session::prune_old_outputs() {
 
   // Sync modified messages to store
   if (store_ && !modified_messages.empty()) {
-    for (const auto *msg : modified_messages) {
+    for (const auto* msg : modified_messages) {
       store_->update(*msg);
     }
   }
@@ -777,7 +777,7 @@ void Session::prune_old_outputs() {
   }
 }
 
-bool Session::detect_doom_loop(const std::string &tool_name, const json &args) {
+bool Session::detect_doom_loop(const std::string& tool_name, const json& args) {
   if (recent_tool_calls_.size() < 3) return false;
 
   std::string args_hash = args.dump();
@@ -794,7 +794,7 @@ bool Session::detect_doom_loop(const std::string &tool_name, const json &args) {
   return matches >= 3;
 }
 
-std::shared_ptr<Session> Session::resume(asio::io_context &io_ctx, const Config &config, const SessionId &session_id,
+std::shared_ptr<Session> Session::resume(asio::io_context& io_ctx, const Config& config, const SessionId& session_id,
                                          std::shared_ptr<JsonMessageStore> store) {
   if (!store) {
     spdlog::warn("Cannot resume session without a store");
@@ -827,7 +827,7 @@ std::shared_ptr<Session> Session::resume(asio::io_context &io_ctx, const Config 
 }
 
 void Session::sync_to_store() {
-  auto *json_store = dynamic_cast<JsonMessageStore *>(store_.get());
+  auto* json_store = dynamic_cast<JsonMessageStore*>(store_.get());
   if (!json_store) {
     return;
   }

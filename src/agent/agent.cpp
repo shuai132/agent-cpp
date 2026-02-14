@@ -3,6 +3,7 @@
 
 #include <filesystem>
 
+#include "core/version.hpp"
 #include "llm/anthropic.hpp"
 #include "mcp/client.hpp"
 #include "skill/skill.hpp"
@@ -31,7 +32,7 @@ void init() {
 
   // Initialize MCP servers from config
   if (!config.mcp_servers.empty()) {
-    auto &mcp_mgr = mcp::McpManager::instance();
+    auto& mcp_mgr = mcp::McpManager::instance();
     mcp_mgr.initialize(config.mcp_servers);
     mcp_mgr.connect_all();
     mcp_mgr.register_tools();
@@ -43,7 +44,7 @@ void shutdown() {
 }
 
 std::string version() {
-  return "0.1.0";
+  return AGENT_SDK_VERSION_STRING;
 }
 
 }  // namespace agent

@@ -11,7 +11,7 @@ class BashTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 
  private:
   static constexpr int DEFAULT_TIMEOUT_MS = 120000;
@@ -24,7 +24,7 @@ class ReadTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Write tool - write file contents
@@ -34,7 +34,7 @@ class WriteTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Edit tool - edit file with search/replace
@@ -44,7 +44,7 @@ class EditTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Glob tool - find files by pattern
@@ -54,7 +54,7 @@ class GlobTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Grep tool - search file contents
@@ -64,7 +64,7 @@ class GrepTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Question tool - ask user a question
@@ -74,7 +74,7 @@ class QuestionTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Task tool - launch subagent
@@ -84,7 +84,7 @@ class TaskTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Skill tool - load specialized skill instructions on demand
@@ -97,7 +97,7 @@ class SkillTool : public SimpleTool {
 
   std::vector<ParameterSchema> parameters() const override;
 
-  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+  std::future<ToolResult> execute(const json& args, const ToolContext& ctx) override;
 };
 
 // Register all builtin tools

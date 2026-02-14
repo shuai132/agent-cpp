@@ -92,10 +92,10 @@ int main(int argc, char* argv[]) {
       auto matches = match_commands(state.input_text);
       state.show_cmd_menu = !matches.empty();
       state.cmd_menu_selected = 0;
-      state.show_file_path_menu = false; // 确保文件路径菜单关闭
+      state.show_file_path_menu = false;  // 确保文件路径菜单关闭
     } else {
       state.show_cmd_menu = false;
-      
+
       // 检查是否输入了 @ 符号以启用文件路径自动完成
       size_t at_pos = state.input_text.rfind('@');
       if (at_pos != std::string::npos) {

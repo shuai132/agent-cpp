@@ -9,7 +9,7 @@ namespace agent::llm {
 // Anthropic Claude provider
 class AnthropicProvider : public Provider {
  public:
-  AnthropicProvider(const ProviderConfig &config, asio::io_context &io_ctx);
+  AnthropicProvider(const ProviderConfig& config, asio::io_context& io_ctx);
 
   std::string name() const override {
     return "anthropic";
@@ -17,17 +17,17 @@ class AnthropicProvider : public Provider {
 
   std::vector<ModelInfo> models() const override;
 
-  std::future<LlmResponse> complete(const LlmRequest &request) override;
+  std::future<LlmResponse> complete(const LlmRequest& request) override;
 
-  void stream(const LlmRequest &request, StreamCallback callback, std::function<void()> on_complete) override;
+  void stream(const LlmRequest& request, StreamCallback callback, std::function<void()> on_complete) override;
 
   void cancel() override;
 
  private:
-  void parse_sse_event(const std::string &data, StreamCallback &callback);
+  void parse_sse_event(const std::string& data, StreamCallback& callback);
 
   ProviderConfig config_;
-  asio::io_context &io_ctx_;
+  asio::io_context& io_ctx_;
   net::HttpClient http_client_;
   std::unique_ptr<net::SseClient> sse_client_;
 

@@ -4,7 +4,7 @@
 
 namespace agent::llm {
 
-AnthropicProvider::AnthropicProvider(const ProviderConfig &config, asio::io_context &io_ctx)
+AnthropicProvider::AnthropicProvider(const ProviderConfig& config, asio::io_context& io_ctx)
     : config_(config), io_ctx_(io_ctx), http_client_(io_ctx) {
   if (!config.base_url.empty()) {
     base_url_ = config.base_url;
@@ -19,7 +19,7 @@ std::vector<ModelInfo> AnthropicProvider::models() const {
   };
 }
 
-std::future<LlmResponse> AnthropicProvider::complete(const LlmRequest &request) {
+std::future<LlmResponse> AnthropicProvider::complete(const LlmRequest& request) {
   auto promise = std::make_shared<std::promise<LlmResponse>>();
   auto future = promise->get_future();
 
@@ -31,7 +31,7 @@ std::future<LlmResponse> AnthropicProvider::complete(const LlmRequest &request) 
   options.headers = {{"Content-Type", "application/json"}, {"x-api-key", config_.api_key}, {"anthropic-version", api_version_}};
 
   // Add any custom headers
-  for (const auto &[key, value] : config_.headers) {
+  for (const auto& [key, value] : config_.headers) {
     options.headers[key] = value;
   }
 
@@ -66,7 +66,7 @@ std::future<LlmResponse> AnthropicProvider::complete(const LlmRequest &request) 
       // Parse response
       Message msg(Role::Assistant, "");
 
-      for (const auto &content : j["content"]) {
+      for (const auto& content : j["content"]) {
         std::string type = content["type"];
         if (type == "text") {
           msg.add_text(content["text"]);
@@ -98,7 +98,7 @@ std::future<LlmResponse> AnthropicProvider::complete(const LlmRequest &request) 
       msg.set_usage(result.usage);
       result.message = std::move(msg);
 
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       result.error = std::string("Parse error: ") + e.what();
     }
 
@@ -108,14 +108,14 @@ std::future<LlmResponse> AnthropicProvider::complete(const LlmRequest &request) 
   return future;
 }
 
-void AnthropicProvider::stream(const LlmRequest &request, StreamCallback callback, std::function<void()> on_complete) {
+void AnthropicProvider::stream(const LlmRequest& request, StreamCallback callback, std::function<void()> on_complete) {
   auto body = request.to_anthropic_format();
   body["stream"] = true;
 
   std::map<std::string, std::string> headers = {
       {"Content-Type", "application/json"}, {"Accept", "text/event-stream"}, {"x-api-key", config_.api_key}, {"anthropic-version", api_version_}};
 
-  for (const auto &[key, value] : config_.headers) {
+  for (const auto& [key, value] : config_.headers) {
     headers[key] = value;
   }
 
@@ -134,7 +134,7 @@ void AnthropicProvider::stream(const LlmRequest &request, StreamCallback callbac
   // Use streaming HTTP request for real-time SSE processing
   http_client_.request_stream(
       base_url_ + "/v1/messages", options,
-      [this, shared_callback, sse_buffer](const std::string &chunk) {
+      [this, shared_callback, sse_buffer](const std::string& chunk) {
         // Accumulate chunk into SSE buffer and parse complete events
         *sse_buffer += chunk;
 
@@ -167,7 +167,7 @@ void AnthropicProvider::stream(const LlmRequest &request, StreamCallback callbac
           }
         }
       },
-      [shared_callback, shared_complete](int status_code, const std::string &error) {
+      [shared_callback, shared_complete](int status_code, const std::string& error) {
         if (!error.empty()) {
           StreamError err;
           err.message = error;
@@ -177,7 +177,7 @@ void AnthropicProvider::stream(const LlmRequest &request, StreamCallback callbac
       });
 }
 
-void AnthropicProvider::parse_sse_event(const std::string &data, StreamCallback &callback) {
+void AnthropicProvider::parse_sse_event(const std::string& data, StreamCallback& callback) {
   if (data == "[DONE]") {
     return;
   }
@@ -256,7 +256,7 @@ void AnthropicProvider::parse_sse_event(const std::string &data, StreamCallback 
       }
       callback(error);
     }
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     spdlog::warn("Failed to parse SSE event: {}", e.what());
   }
 }

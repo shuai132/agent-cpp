@@ -21,7 +21,7 @@ std::vector<ParameterSchema> ReadTool::parameters() const {
           {"limit", "number", "The number of lines to read (defaults to 2000)", false, json(2000), std::nullopt}};
 }
 
-std::future<ToolResult> ReadTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> ReadTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string file_path = args.value("filePath", "");
     int offset = args.value("offset", 0);

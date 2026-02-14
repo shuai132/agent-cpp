@@ -15,7 +15,7 @@ using namespace agent::tools;
 namespace fs = std::filesystem;
 
 // Helper: create a ToolContext with a given working directory
-static ToolContext make_context(const std::string &working_dir) {
+static ToolContext make_context(const std::string& working_dir) {
   ToolContext ctx;
   ctx.session_id = "test-session";
   ctx.message_id = "test-message";
@@ -38,7 +38,7 @@ class TempDir {
     fs::remove_all(path_, ec);
   }
 
-  const fs::path &path() const {
+  const fs::path& path() const {
     return path_;
   }
 
@@ -47,7 +47,7 @@ class TempDir {
   }
 
   // Create a file with content under this temp dir
-  fs::path create_file(const std::string &relative_path, const std::string &content) {
+  fs::path create_file(const std::string& relative_path, const std::string& content) {
     fs::path full = path_ / relative_path;
     fs::create_directories(full.parent_path());
     std::ofstream ofs(full);

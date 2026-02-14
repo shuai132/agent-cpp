@@ -64,7 +64,7 @@ class SkillParserTest : public ::testing::Test {
     fs::remove_all(test_dir_, ec);
   }
 
-  fs::path create_skill(const std::string &name, const std::string &content) {
+  fs::path create_skill(const std::string& name, const std::string& content) {
     auto skill_dir = test_dir_ / name;
     fs::create_directories(skill_dir);
     auto skill_file = skill_dir / "SKILL.md";
@@ -186,7 +186,7 @@ class SkillRegistryTest : public ::testing::Test {
     fs::remove_all(test_dir_, ec);
   }
 
-  void create_skill_in(const fs::path &base_dir, const std::string &name, const std::string &desc) {
+  void create_skill_in(const fs::path& base_dir, const std::string& name, const std::string& desc) {
     auto skill_dir = base_dir / "skills" / name;
     fs::create_directories(skill_dir);
     std::ofstream(skill_dir / "SKILL.md") << "---\nname: " << name << "\ndescription: " << desc << "\n---\nBody for " << name << "\n";
@@ -311,7 +311,7 @@ TEST_F(AgentInstructionsTest, FindAgentsMd) {
 
   // Should find AGENTS.md (may also find global files)
   bool found = false;
-  for (const auto &p : results) {
+  for (const auto& p : results) {
     if (p.filename() == "AGENTS.md" && p.parent_path() == test_dir_) {
       found = true;
     }
@@ -325,7 +325,7 @@ TEST_F(AgentInstructionsTest, FindClaudeMd) {
   auto results = config_paths::find_agent_instructions(test_dir_);
 
   bool found = false;
-  for (const auto &p : results) {
+  for (const auto& p : results) {
     if (p.filename() == "CLAUDE.md" && p.parent_path() == test_dir_) {
       found = true;
     }
@@ -341,7 +341,7 @@ TEST_F(AgentInstructionsTest, FindInAgentsSdkDir) {
   auto results = config_paths::find_agent_instructions(test_dir_);
 
   bool found = false;
-  for (const auto &p : results) {
+  for (const auto& p : results) {
     if (p.parent_path() == dir) {
       found = true;
     }
@@ -357,7 +357,7 @@ TEST_F(AgentInstructionsTest, FindInAgentsDir) {
   auto results = config_paths::find_agent_instructions(test_dir_);
 
   bool found = false;
-  for (const auto &p : results) {
+  for (const auto& p : results) {
     if (p.parent_path() == dir) {
       found = true;
     }
@@ -376,7 +376,7 @@ TEST_F(AgentInstructionsTest, StopsAtGitRoot) {
 
   // Should find both: parent root's AGENTS.md + sub's AGENTS.md
   int project_count = 0;
-  for (const auto &p : results) {
+  for (const auto& p : results) {
     if (p.string().find(test_dir_.string()) != std::string::npos) {
       project_count++;
     }

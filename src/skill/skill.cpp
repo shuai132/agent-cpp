@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 // Name validation
 // ============================================================================
 
-bool validate_skill_name(const std::string &name) {
+bool validate_skill_name(const std::string& name) {
   if (name.empty() || name.size() > 64) return false;
 
   // Must match: ^[a-z0-9]+(-[a-z0-9]+)*$
@@ -29,7 +29,7 @@ bool validate_skill_name(const std::string &name) {
 
 // Extract YAML frontmatter between --- delimiters
 // Returns: {frontmatter_string, body_string}
-static std::pair<std::string, std::string> split_frontmatter(const std::string &content) {
+static std::pair<std::string, std::string> split_frontmatter(const std::string& content) {
   // Must start with ---
   if (content.substr(0, 3) != "---") {
     return {"", content};
@@ -56,7 +56,7 @@ static std::pair<std::string, std::string> split_frontmatter(const std::string &
 
 // Simple YAML-like parser for frontmatter (handles flat key-value + metadata map)
 // This is intentionally simple — not a full YAML parser.
-static std::map<std::string, std::string> parse_flat_yaml(const std::string &yaml) {
+static std::map<std::string, std::string> parse_flat_yaml(const std::string& yaml) {
   std::map<std::string, std::string> result;
   std::istringstream stream(yaml);
   std::string line;
@@ -72,7 +72,7 @@ static std::map<std::string, std::string> parse_flat_yaml(const std::string &yam
     std::string value = line.substr(colon_pos + 1);
 
     // Trim whitespace
-    auto trim = [](std::string &s) {
+    auto trim = [](std::string& s) {
       size_t start = s.find_first_not_of(" \t\r\n");
       size_t end = s.find_last_not_of(" \t\r\n");
       s = (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
@@ -93,7 +93,7 @@ static std::map<std::string, std::string> parse_flat_yaml(const std::string &yam
 }
 
 // Parse the metadata block (indented key-value pairs under "metadata:")
-static std::map<std::string, std::string> parse_metadata_block(const std::string &yaml) {
+static std::map<std::string, std::string> parse_metadata_block(const std::string& yaml) {
   std::map<std::string, std::string> result;
   std::istringstream stream(yaml);
   std::string line;
@@ -125,7 +125,7 @@ static std::map<std::string, std::string> parse_metadata_block(const std::string
       std::string key = line.substr(0, colon_pos);
       std::string value = line.substr(colon_pos + 1);
 
-      auto trim = [](std::string &s) {
+      auto trim = [](std::string& s) {
         size_t st = s.find_first_not_of(" \t\r\n");
         size_t en = s.find_last_not_of(" \t\r\n");
         s = (st == std::string::npos) ? "" : s.substr(st, en - st + 1);
@@ -143,7 +143,7 @@ static std::map<std::string, std::string> parse_metadata_block(const std::string
   return result;
 }
 
-ParseResult parse_skill_file(const fs::path &path) {
+ParseResult parse_skill_file(const fs::path& path) {
   // Read file
   std::ifstream file(path);
   if (!file.is_open()) {
@@ -214,7 +214,7 @@ ParseResult parse_skill_file(const fs::path &path) {
 // SkillRegistry
 // ============================================================================
 
-SkillRegistry &SkillRegistry::instance() {
+SkillRegistry& SkillRegistry::instance() {
   static SkillRegistry registry;
   return registry;
 }
@@ -231,13 +231,13 @@ void SkillRegistry::register_skill(SkillInfo skill) {
   skills_[skill.name] = std::move(skill);
 }
 
-void SkillRegistry::scan_skills_dir(const fs::path &skills_dir) {
+void SkillRegistry::scan_skills_dir(const fs::path& skills_dir) {
   if (!fs::exists(skills_dir) || !fs::is_directory(skills_dir)) {
     return;
   }
 
   std::error_code ec;
-  for (const auto &entry : fs::directory_iterator(skills_dir, ec)) {
+  for (const auto& entry : fs::directory_iterator(skills_dir, ec)) {
     if (!entry.is_directory()) continue;
 
     auto skill_md = entry.path() / "SKILL.md";
@@ -252,11 +252,11 @@ void SkillRegistry::scan_skills_dir(const fs::path &skills_dir) {
   }
 }
 
-void SkillRegistry::discover(const fs::path &start_dir, const std::vector<fs::path> &extra_paths) {
+void SkillRegistry::discover(const fs::path& start_dir, const std::vector<fs::path>& extra_paths) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // Skill search directories within each traversed directory
-  static constexpr const char *PROJECT_SKILL_DIRS[] = {
+  static constexpr const char* PROJECT_SKILL_DIRS[] = {
       ".agent-sdk/skills",
       ".agents/skills",
       ".claude/skills",
@@ -268,7 +268,7 @@ void SkillRegistry::discover(const fs::path &start_dir, const std::vector<fs::pa
 
   fs::path current = start_dir;
   while (true) {
-    for (const auto &dir : PROJECT_SKILL_DIRS) {
+    for (const auto& dir : PROJECT_SKILL_DIRS) {
       scan_skills_dir(current / dir);
     }
 
@@ -289,19 +289,19 @@ void SkillRegistry::discover(const fs::path &start_dir, const std::vector<fs::pa
       home / ".config" / "opencode" / "skills",  // ~/.config/opencode/skills/
   };
 
-  for (const auto &dir : global_skill_dirs) {
+  for (const auto& dir : global_skill_dirs) {
     scan_skills_dir(dir);
   }
 
   // 3. Scan additional paths from config
-  for (const auto &path : extra_paths) {
+  for (const auto& path : extra_paths) {
     scan_skills_dir(path);
   }
 
   spdlog::info("Skill discovery complete: {} skills registered", skills_.size());
 }
 
-std::optional<SkillInfo> SkillRegistry::get(const std::string &name) const {
+std::optional<SkillInfo> SkillRegistry::get(const std::string& name) const {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = skills_.find(name);
   if (it != skills_.end()) {
@@ -314,7 +314,7 @@ std::vector<SkillInfo> SkillRegistry::all() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<SkillInfo> result;
   result.reserve(skills_.size());
-  for (const auto &[name, skill] : skills_) {
+  for (const auto& [name, skill] : skills_) {
     result.push_back(skill);
   }
   return result;

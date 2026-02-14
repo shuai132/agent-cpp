@@ -344,14 +344,11 @@ Element build_file_path_menu(const AppState& state) {
   }
 
   auto menu = vbox(menu_items);
-  
+
   // 如果超过最大显示数量，添加滚动指示
   if (total_items > MAX_VISIBLE_ITEMS) {
     std::string indicator = "(" + std::to_string(start_idx + 1) + "-" + std::to_string(end_idx) + "/" + std::to_string(total_items) + ")";
-    menu = vbox({
-      menu,
-      hbox({text("  "), text(indicator) | dim, filler()})
-    });
+    menu = vbox({menu, hbox({text("  "), text(indicator) | dim, filler()})});
   }
 
   return menu | borderRounded | color(Color::GrayLight) | yflex;
@@ -458,7 +455,8 @@ Element build_question_panel(AppState& state) {
           input_display = "Type your answer here...";
         }
         auto input_line = hbox({
-            text("      A: ") | dim, text(input_display) | (state.question_input_text.empty() ? dim : nothing) | underlined,
+            text("      A: ") | dim,
+            text(input_display) | (state.question_input_text.empty() ? dim : nothing) | underlined,
             text("▌") | blink | color(Color::Cyan),  // 光标
         });
         question_items.push_back(input_line);

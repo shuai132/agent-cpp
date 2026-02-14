@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 
 // Expand brace patterns like {a,b,c} into multiple strings.
 // Supports nesting: {a,b{c,d}} → a, bc, bd
-static std::vector<std::string> expand_braces(const std::string &pattern) {
+static std::vector<std::string> expand_braces(const std::string& pattern) {
   // Find the first top-level '{'
   size_t open_pos = std::string::npos;
   for (size_t i = 0; i < pattern.size(); ++i) {
@@ -69,7 +69,7 @@ static std::vector<std::string> expand_braces(const std::string &pattern) {
 
   // Combine prefix + each alternative + suffix, then recursively expand
   std::vector<std::string> results;
-  for (const auto &alt : alternatives) {
+  for (const auto& alt : alternatives) {
     auto expanded = expand_braces(prefix + alt + suffix);
     results.insert(results.end(), expanded.begin(), expanded.end());
   }
@@ -78,7 +78,7 @@ static std::vector<std::string> expand_braces(const std::string &pattern) {
 
 // Match a single glob segment (no path separators) against a string.
 // Supports: * (any chars), ? (single char), [abc], [^abc]/[!abc], [a-z] ranges
-static bool match_segment(const std::string &pattern, size_t pi, const std::string &str, size_t si) {
+static bool match_segment(const std::string& pattern, size_t pi, const std::string& str, size_t si) {
   while (pi < pattern.size() && si < str.size()) {
     char pc = pattern[pi];
 
@@ -132,12 +132,12 @@ static bool match_segment(const std::string &pattern, size_t pi, const std::stri
   return pi == pattern.size() && si == str.size();
 }
 
-static bool match_segment(const std::string &pattern, const std::string &str) {
+static bool match_segment(const std::string& pattern, const std::string& str) {
   return match_segment(pattern, 0, str, 0);
 }
 
 // Split a path string by '/' into segments
-static std::vector<std::string> split_path(const std::string &path) {
+static std::vector<std::string> split_path(const std::string& path) {
   std::vector<std::string> segments;
   std::istringstream iss(path);
   std::string seg;
@@ -150,7 +150,7 @@ static std::vector<std::string> split_path(const std::string &path) {
 }
 
 // Match a full relative path against a glob pattern (with ** support).
-static bool match_glob_path(const std::vector<std::string> &pat_segs, size_t pi, const std::vector<std::string> &path_segs, size_t si) {
+static bool match_glob_path(const std::vector<std::string>& pat_segs, size_t pi, const std::vector<std::string>& path_segs, size_t si) {
   while (pi < pat_segs.size() && si < path_segs.size()) {
     if (pat_segs[pi] == "**") {
       pi++;
@@ -176,7 +176,7 @@ static bool match_glob_path(const std::vector<std::string> &pat_segs, size_t pi,
   return pi == pat_segs.size() && si == path_segs.size();
 }
 
-static bool match_glob(const std::string &pattern, const std::string &rel_path) {
+static bool match_glob(const std::string& pattern, const std::string& rel_path) {
   auto pat_segs = split_path(pattern);
   auto path_segs = split_path(rel_path);
   return match_glob_path(pat_segs, 0, path_segs, 0);
@@ -193,7 +193,7 @@ std::vector<ParameterSchema> GlobTool::parameters() const {
           {"path", "string", "The directory to search in", false, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> GlobTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> GlobTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string pattern = args.value("pattern", "");
     std::string search_path = args.value("path", ctx.working_dir);
@@ -217,12 +217,12 @@ std::future<ToolResult> GlobTool::execute(const json &args, const ToolContext &c
     std::vector<std::string> matches;
 
     try {
-      for (const auto &entry : fs::recursive_directory_iterator(base_path)) {
+      for (const auto& entry : fs::recursive_directory_iterator(base_path)) {
         if (!entry.is_regular_file()) continue;
 
         std::string rel_path = fs::relative(entry.path(), base_path).string();
 
-        for (const auto &pat : expanded_patterns) {
+        for (const auto& pat : expanded_patterns) {
           bool has_path_sep = (pat.find('/') != std::string::npos);
 
           if (has_path_sep) {
@@ -239,7 +239,7 @@ std::future<ToolResult> GlobTool::execute(const json &args, const ToolContext &c
           }
         }
       }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       return ToolResult::error(std::string("Error searching: ") + e.what());
     }
 
@@ -250,7 +250,7 @@ std::future<ToolResult> GlobTool::execute(const json &args, const ToolContext &c
     std::sort(matches.begin(), matches.end());
 
     std::ostringstream output;
-    for (const auto &match : matches) {
+    for (const auto& match : matches) {
       output << match << "\n";
     }
 

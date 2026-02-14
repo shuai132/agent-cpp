@@ -11,7 +11,7 @@
 namespace agent::net {
 
 // URL parsing
-std::optional<ParsedUrl> ParsedUrl::parse(const std::string &url) {
+std::optional<ParsedUrl> ParsedUrl::parse(const std::string& url) {
   // Simple regex-based URL parser
   std::regex url_regex(R"(^(https?):\/\/([^:\/\s]+)(?::(\d+))?(\/[^\?\s]*)?(\?[^\s]*)?)");
   std::smatch match;
@@ -38,12 +38,12 @@ std::string ParsedUrl::port_or_default() const {
 // HTTP Client implementation
 class HttpClient::Impl {
  public:
-  explicit Impl(asio::io_context &io_ctx) : io_ctx_(io_ctx), ssl_ctx_(asio::ssl::context::tlsv12_client), resolver_(io_ctx) {
+  explicit Impl(asio::io_context& io_ctx) : io_ctx_(io_ctx), ssl_ctx_(asio::ssl::context::tlsv12_client), resolver_(io_ctx) {
     ssl_ctx_.set_default_verify_paths();
     ssl_ctx_.set_verify_mode(asio::ssl::verify_peer);
   }
 
-  void request(const std::string &url, const HttpOptions &options, std::function<void(HttpResponse)> callback) {
+  void request(const std::string& url, const HttpOptions& options, std::function<void(HttpResponse)> callback) {
     auto parsed = ParsedUrl::parse(url);
     if (!parsed) {
       callback(HttpResponse{0, {}, "", "Invalid URL"});
@@ -57,8 +57,8 @@ class HttpClient::Impl {
     }
   }
 
-  void request_stream(const std::string &url, const HttpOptions &options, StreamDataCallback on_data,
-                      std::function<void(int, const std::string &)> on_complete) {
+  void request_stream(const std::string& url, const HttpOptions& options, StreamDataCallback on_data,
+                      std::function<void(int, const std::string&)> on_complete) {
     auto parsed = ParsedUrl::parse(url);
     if (!parsed) {
       on_complete(0, "Invalid URL");
@@ -87,11 +87,11 @@ class HttpClient::Impl {
 
   // Start a timeout timer. When it fires, set the timed_out flag and close the socket.
   template <typename Socket>
-  static std::shared_ptr<asio::steady_timer> start_timeout(asio::io_context &io_ctx, std::chrono::seconds timeout, std::shared_ptr<Socket> socket,
+  static std::shared_ptr<asio::steady_timer> start_timeout(asio::io_context& io_ctx, std::chrono::seconds timeout, std::shared_ptr<Socket> socket,
                                                            std::shared_ptr<bool> timed_out) {
     auto timer = std::make_shared<asio::steady_timer>(io_ctx);
     timer->expires_after(timeout);
-    timer->async_wait([socket, timed_out, timer](const asio::error_code &ec) {
+    timer->async_wait([socket, timed_out, timer](const asio::error_code& ec) {
       if (!ec) {
         // Timer fired (not cancelled) — mark as timed out and close socket
         *timed_out = true;
@@ -101,7 +101,7 @@ class HttpClient::Impl {
     return timer;
   }
 
-  void request_https(const ParsedUrl &url, const HttpOptions &options, std::function<void(HttpResponse)> callback) {
+  void request_https(const ParsedUrl& url, const HttpOptions& options, std::function<void(HttpResponse)> callback) {
     auto socket = std::make_shared<asio::ssl::stream<asio::ip::tcp::socket>>(io_ctx_, ssl_ctx_);
     auto response = std::make_shared<HttpResponse>();
     auto request_str = std::make_shared<std::string>();
@@ -127,7 +127,7 @@ class HttpClient::Impl {
     req << "Host: " << url.host << "\r\n";
     req << "Connection: close\r\n";
 
-    for (const auto &[key, value] : options.headers) {
+    for (const auto& [key, value] : options.headers) {
       req << key << ": " << value << "\r\n";
     }
 
@@ -145,7 +145,7 @@ class HttpClient::Impl {
     // Resolve and connect
     resolver_.async_resolve(
         url.host, url.port_or_default(),
-        [this, socket, request_str, response, buffer, guarded_callback, url](const asio::error_code &ec,
+        [this, socket, request_str, response, buffer, guarded_callback, url](const asio::error_code& ec,
                                                                              asio::ip::tcp::resolver::results_type results) {
           if (ec) {
             response->error = "DNS resolution failed: " + ec.message();
@@ -155,7 +155,7 @@ class HttpClient::Impl {
 
           asio::async_connect(
               socket->lowest_layer(), results,
-              [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
+              [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code& ec, const asio::ip::tcp::endpoint&) {
                 if (ec) {
                   response->error = "Connection failed: " + ec.message();
                   guarded_callback(*response);
@@ -164,7 +164,7 @@ class HttpClient::Impl {
 
                 // SSL handshake
                 socket->async_handshake(asio::ssl::stream_base::client,
-                                        [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec) {
+                                        [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code& ec) {
                                           if (ec) {
                                             response->error = "SSL handshake failed: " + ec.message();
                                             guarded_callback(*response);
@@ -173,7 +173,7 @@ class HttpClient::Impl {
 
                                           // Send request
                                           asio::async_write(*socket, asio::buffer(*request_str),
-                                                            [this, socket, response, buffer, guarded_callback](const asio::error_code &ec, size_t) {
+                                                            [this, socket, response, buffer, guarded_callback](const asio::error_code& ec, size_t) {
                                                               if (ec) {
                                                                 response->error = "Write failed: " + ec.message();
                                                                 guarded_callback(*response);
@@ -188,7 +188,7 @@ class HttpClient::Impl {
         });
   }
 
-  void request_http(const ParsedUrl &url, const HttpOptions &options, std::function<void(HttpResponse)> callback) {
+  void request_http(const ParsedUrl& url, const HttpOptions& options, std::function<void(HttpResponse)> callback) {
     auto socket = std::make_shared<asio::ip::tcp::socket>(io_ctx_);
     auto response = std::make_shared<HttpResponse>();
     auto request_str = std::make_shared<std::string>();
@@ -214,7 +214,7 @@ class HttpClient::Impl {
     req << "Host: " << url.host << "\r\n";
     req << "Connection: close\r\n";
 
-    for (const auto &[key, value] : options.headers) {
+    for (const auto& [key, value] : options.headers) {
       req << key << ": " << value << "\r\n";
     }
 
@@ -228,7 +228,7 @@ class HttpClient::Impl {
 
     resolver_.async_resolve(
         url.host, url.port_or_default(),
-        [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec, asio::ip::tcp::resolver::results_type results) {
+        [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code& ec, asio::ip::tcp::resolver::results_type results) {
           if (ec) {
             response->error = "DNS resolution failed: " + ec.message();
             guarded_callback(*response);
@@ -237,7 +237,7 @@ class HttpClient::Impl {
 
           asio::async_connect(
               *socket, results,
-              [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
+              [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code& ec, const asio::ip::tcp::endpoint&) {
                 if (ec) {
                   response->error = "Connection failed: " + ec.message();
                   guarded_callback(*response);
@@ -245,7 +245,7 @@ class HttpClient::Impl {
                 }
 
                 asio::async_write(*socket, asio::buffer(*request_str),
-                                  [this, socket, response, buffer, guarded_callback](const asio::error_code &ec, size_t) {
+                                  [this, socket, response, buffer, guarded_callback](const asio::error_code& ec, size_t) {
                                     if (ec) {
                                       response->error = "Write failed: " + ec.message();
                                       guarded_callback(*response);
@@ -262,7 +262,7 @@ class HttpClient::Impl {
   void read_response(std::shared_ptr<Socket> socket, std::shared_ptr<HttpResponse> response, std::shared_ptr<asio::streambuf> buffer,
                      std::function<void(HttpResponse)> callback) {
     asio::async_read_until(*socket, *buffer, "\r\n\r\n",
-                           [this, socket, response, buffer, callback](const asio::error_code &ec, size_t bytes_transferred) {
+                           [this, socket, response, buffer, callback](const asio::error_code& ec, size_t bytes_transferred) {
                              if (ec && ec != asio::error::eof) {
                                response->error = "Read headers failed: " + ec.message();
                                callback(*response);
@@ -280,7 +280,7 @@ class HttpClient::Impl {
                              if (std::regex_search(status_line, match, status_regex)) {
                                try {
                                  response->status_code = std::stoi(match[1].str());
-                               } catch (const std::exception &) {
+                               } catch (const std::exception&) {
                                  response->error = "Invalid HTTP response: cannot parse status code";
                                  callback(*response);
                                  return;
@@ -327,14 +327,14 @@ class HttpClient::Impl {
           callback(*response);
           return;
         }
-      } catch (const std::exception &) {
+      } catch (const std::exception&) {
         // Invalid Content-Length, ignore and continue reading
       }
     }
 
     // Continue reading until EOF or we have all data
     asio::async_read(*socket, *buffer, asio::transfer_at_least(1),
-                     [this, socket, response, buffer, callback](const asio::error_code &ec, size_t bytes_transferred) {
+                     [this, socket, response, buffer, callback](const asio::error_code& ec, size_t bytes_transferred) {
                        // SSL connections may return various errors on close
                        // Treat any SSL category error as potential EOF
                        bool is_eof =
@@ -366,7 +366,7 @@ class HttpClient::Impl {
                                callback(*response);
                                return;
                              }
-                           } catch (const std::exception &) {
+                           } catch (const std::exception&) {
                              // Invalid Content-Length, ignore and continue reading
                            }
                          }
@@ -376,8 +376,8 @@ class HttpClient::Impl {
   }
 
   // Streaming request implementations
-  void request_stream_https(const ParsedUrl &url, const HttpOptions &options, StreamDataCallback on_data,
-                            std::function<void(int, const std::string &)> on_complete) {
+  void request_stream_https(const ParsedUrl& url, const HttpOptions& options, StreamDataCallback on_data,
+                            std::function<void(int, const std::string&)> on_complete) {
     auto socket = std::make_shared<asio::ssl::stream<asio::ip::tcp::socket>>(io_ctx_, ssl_ctx_);
     auto request_str = std::make_shared<std::string>();
     auto buffer = std::make_shared<asio::streambuf>();
@@ -389,8 +389,8 @@ class HttpClient::Impl {
     auto timer = start_timeout(io_ctx_, options.timeout, socket, timed_out);
 
     // Wrap on_complete to cancel timer and check timeout
-    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string &)>>(
-        [timer, timed_out, on_complete = std::move(on_complete)](int code, const std::string &err) {
+    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string&)>>(
+        [timer, timed_out, on_complete = std::move(on_complete)](int code, const std::string& err) {
           timer->cancel();
           if (*timed_out) {
             on_complete(0, "Request timed out");
@@ -405,7 +405,7 @@ class HttpClient::Impl {
     req << "Host: " << url.host << "\r\n";
     req << "Connection: close\r\n";
 
-    for (const auto &[key, value] : options.headers) {
+    for (const auto& [key, value] : options.headers) {
       req << key << ": " << value << "\r\n";
     }
 
@@ -423,7 +423,7 @@ class HttpClient::Impl {
     // Resolve and connect
     resolver_.async_resolve(
         url.host, url.port_or_default(),
-        [this, socket, request_str, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code &ec,
+        [this, socket, request_str, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code& ec,
                                                                                              asio::ip::tcp::resolver::results_type results) {
           if (ec) {
             (*shared_on_complete)(0, "DNS resolution failed: " + ec.message());
@@ -432,22 +432,22 @@ class HttpClient::Impl {
 
           asio::async_connect(
               socket->lowest_layer(), results,
-              [this, socket, request_str, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code &ec,
-                                                                                                   const asio::ip::tcp::endpoint &) {
+              [this, socket, request_str, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code& ec,
+                                                                                                   const asio::ip::tcp::endpoint&) {
                 if (ec) {
                   (*shared_on_complete)(0, "Connection failed: " + ec.message());
                   return;
                 }
 
                 socket->async_handshake(asio::ssl::stream_base::client, [this, socket, request_str, buffer, status_code, shared_on_data,
-                                                                         shared_on_complete](const asio::error_code &ec) {
+                                                                         shared_on_complete](const asio::error_code& ec) {
                   if (ec) {
                     (*shared_on_complete)(0, "SSL handshake failed: " + ec.message());
                     return;
                   }
 
                   asio::async_write(*socket, asio::buffer(*request_str),
-                                    [this, socket, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code &ec, size_t) {
+                                    [this, socket, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code& ec, size_t) {
                                       if (ec) {
                                         (*shared_on_complete)(0, "Write failed: " + ec.message());
                                         return;
@@ -460,8 +460,8 @@ class HttpClient::Impl {
         });
   }
 
-  void request_stream_http(const ParsedUrl &url, const HttpOptions &options, StreamDataCallback on_data,
-                           std::function<void(int, const std::string &)> on_complete) {
+  void request_stream_http(const ParsedUrl& url, const HttpOptions& options, StreamDataCallback on_data,
+                           std::function<void(int, const std::string&)> on_complete) {
     auto socket = std::make_shared<asio::ip::tcp::socket>(io_ctx_);
     auto request_str = std::make_shared<std::string>();
     auto buffer = std::make_shared<asio::streambuf>();
@@ -473,8 +473,8 @@ class HttpClient::Impl {
     auto timer = start_timeout(io_ctx_, options.timeout, socket, timed_out);
 
     // Wrap on_complete to cancel timer and check timeout
-    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string &)>>(
-        [timer, timed_out, on_complete = std::move(on_complete)](int code, const std::string &err) {
+    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string&)>>(
+        [timer, timed_out, on_complete = std::move(on_complete)](int code, const std::string& err) {
           timer->cancel();
           if (*timed_out) {
             on_complete(0, "Request timed out");
@@ -489,7 +489,7 @@ class HttpClient::Impl {
     req << "Host: " << url.host << "\r\n";
     req << "Connection: close\r\n";
 
-    for (const auto &[key, value] : options.headers) {
+    for (const auto& [key, value] : options.headers) {
       req << key << ": " << value << "\r\n";
     }
 
@@ -503,7 +503,7 @@ class HttpClient::Impl {
 
     resolver_.async_resolve(url.host, url.port_or_default(),
                             [this, socket, request_str, buffer, status_code, shared_on_data, shared_on_complete](
-                                const asio::error_code &ec, asio::ip::tcp::resolver::results_type results) {
+                                const asio::error_code& ec, asio::ip::tcp::resolver::results_type results) {
                               if (ec) {
                                 (*shared_on_complete)(0, "DNS resolution failed: " + ec.message());
                                 return;
@@ -512,7 +512,7 @@ class HttpClient::Impl {
                               asio::async_connect(
                                   *socket, results,
                                   [this, socket, request_str, buffer, status_code, shared_on_data, shared_on_complete](
-                                      const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
+                                      const asio::error_code& ec, const asio::ip::tcp::endpoint&) {
                                     if (ec) {
                                       (*shared_on_complete)(0, "Connection failed: " + ec.message());
                                       return;
@@ -520,7 +520,7 @@ class HttpClient::Impl {
 
                                     asio::async_write(
                                         *socket, asio::buffer(*request_str),
-                                        [this, socket, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code &ec, size_t) {
+                                        [this, socket, buffer, status_code, shared_on_data, shared_on_complete](const asio::error_code& ec, size_t) {
                                           if (ec) {
                                             (*shared_on_complete)(0, "Write failed: " + ec.message());
                                             return;
@@ -534,9 +534,9 @@ class HttpClient::Impl {
 
   template <typename Socket>
   void read_stream_headers(std::shared_ptr<Socket> socket, std::shared_ptr<asio::streambuf> buffer, std::shared_ptr<int> status_code,
-                           std::shared_ptr<StreamDataCallback> on_data, std::shared_ptr<std::function<void(int, const std::string &)>> on_complete) {
+                           std::shared_ptr<StreamDataCallback> on_data, std::shared_ptr<std::function<void(int, const std::string&)>> on_complete) {
     asio::async_read_until(*socket, *buffer, "\r\n\r\n",
-                           [this, socket, buffer, status_code, on_data, on_complete](const asio::error_code &ec, size_t bytes_transferred) {
+                           [this, socket, buffer, status_code, on_data, on_complete](const asio::error_code& ec, size_t bytes_transferred) {
                              if (ec && ec != asio::error::eof) {
                                (*on_complete)(0, "Read headers failed: " + ec.message());
                                return;
@@ -552,7 +552,7 @@ class HttpClient::Impl {
                              if (std::regex_search(status_line, match, status_regex)) {
                                try {
                                  *status_code = std::stoi(match[1].str());
-                               } catch (const std::exception &) {
+                               } catch (const std::exception&) {
                                  (*on_complete)(0, "Invalid HTTP response: cannot parse status code");
                                  return;
                                }
@@ -590,9 +590,9 @@ class HttpClient::Impl {
 
   template <typename Socket>
   void read_stream_data(std::shared_ptr<Socket> socket, std::shared_ptr<asio::streambuf> buffer, std::shared_ptr<int> status_code,
-                        std::shared_ptr<StreamDataCallback> on_data, std::shared_ptr<std::function<void(int, const std::string &)>> on_complete) {
+                        std::shared_ptr<StreamDataCallback> on_data, std::shared_ptr<std::function<void(int, const std::string&)>> on_complete) {
     asio::async_read(*socket, *buffer, asio::transfer_at_least(1),
-                     [this, socket, buffer, status_code, on_data, on_complete](const asio::error_code &ec, size_t bytes_transferred) {
+                     [this, socket, buffer, status_code, on_data, on_complete](const asio::error_code& ec, size_t bytes_transferred) {
                        bool is_eof =
                            (ec == asio::error::eof) || (ec.category() == asio::error::get_ssl_category()) || ec == asio::ssl::error::stream_truncated;
 
@@ -620,20 +620,20 @@ class HttpClient::Impl {
                      });
   }
 
-  asio::io_context &io_ctx_;
+  asio::io_context& io_ctx_;
   asio::ssl::context ssl_ctx_;
   asio::ip::tcp::resolver resolver_;
 };
 
-HttpClient::HttpClient(asio::io_context &io_ctx) : impl_(std::make_unique<Impl>(io_ctx)) {}
+HttpClient::HttpClient(asio::io_context& io_ctx) : impl_(std::make_unique<Impl>(io_ctx)) {}
 
 HttpClient::~HttpClient() = default;
 
-void HttpClient::request(const std::string &url, const HttpOptions &options, std::function<void(HttpResponse)> callback) {
+void HttpClient::request(const std::string& url, const HttpOptions& options, std::function<void(HttpResponse)> callback) {
   impl_->request(url, options, std::move(callback));
 }
 
-std::future<HttpResponse> HttpClient::request(const std::string &url, const HttpOptions &options) {
+std::future<HttpResponse> HttpClient::request(const std::string& url, const HttpOptions& options) {
   if (options.max_retries <= 0) {
     // No retry — preserve original behavior
     auto promise = std::make_shared<std::promise<HttpResponse>>();
@@ -648,7 +648,7 @@ std::future<HttpResponse> HttpClient::request(const std::string &url, const Http
 
   // With retry — use std::async to drive the retry loop
   return std::async(std::launch::async, [this, url, options]() -> HttpResponse {
-    auto is_retryable = [](const HttpResponse &resp) -> bool {
+    auto is_retryable = [](const HttpResponse& resp) -> bool {
       // Connection/timeout errors (status_code == 0 means no HTTP response received)
       if (resp.status_code == 0) return true;
       // 429 Too Many Requests
@@ -695,19 +695,19 @@ std::future<HttpResponse> HttpClient::request(const std::string &url, const Http
   });
 }
 
-void HttpClient::request_stream(const std::string &url, const HttpOptions &options, StreamDataCallback on_data,
-                                std::function<void(int status_code, const std::string &error)> on_complete) {
+void HttpClient::request_stream(const std::string& url, const HttpOptions& options, StreamDataCallback on_data,
+                                std::function<void(int status_code, const std::string& error)> on_complete) {
   impl_->request_stream(url, options, std::move(on_data), std::move(on_complete));
 }
 
-std::future<HttpResponse> HttpClient::get(const std::string &url, const std::map<std::string, std::string> &headers) {
+std::future<HttpResponse> HttpClient::get(const std::string& url, const std::map<std::string, std::string>& headers) {
   HttpOptions options;
   options.method = "GET";
   options.headers = headers;
   return request(url, options);
 }
 
-std::future<HttpResponse> HttpClient::post(const std::string &url, const std::string &body, const std::map<std::string, std::string> &headers) {
+std::future<HttpResponse> HttpClient::post(const std::string& url, const std::string& body, const std::map<std::string, std::string>& headers) {
   HttpOptions options;
   options.method = "POST";
   options.body = body;

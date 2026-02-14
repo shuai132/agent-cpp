@@ -47,7 +47,7 @@ ctest --test-dir build -R "MessageTest"
 
 ```bash
 # 格式化所有源文件（clang-format，基于 Google 风格）
-find src tests examples -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i
+find examples src tests tui -type f | xargs clang-format -i
 ```
 
 配置文件为 `.clang-format`：基于 Google 风格，150 列宽度限制，仅允许空的短函数/Lambda 写在单行。

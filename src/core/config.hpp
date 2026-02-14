@@ -85,18 +85,18 @@ struct Config {
   std::optional<std::filesystem::path> log_file;
 
   // Load from file
-  static Config load(const std::filesystem::path &path);
+  static Config load(const std::filesystem::path& path);
 
   static Config load_default();
 
   // Save to file
-  void save(const std::filesystem::path &path) const;
+  void save(const std::filesystem::path& path) const;
 
   // Get provider config
-  std::optional<ProviderConfig> get_provider(const std::string &name) const;
+  std::optional<ProviderConfig> get_provider(const std::string& name) const;
 
   // Get agent config
-  std::optional<AgentConfig> get_agent(const AgentId &id) const;
+  std::optional<AgentConfig> get_agent(const AgentId& id) const;
 
   AgentConfig get_or_create_agent(AgentType type) const;
 };
@@ -112,13 +112,13 @@ std::filesystem::path default_config_file();
 std::filesystem::path project_config_file();
 
 // Find the git worktree root from a starting directory (returns nullopt if not in a git repo)
-std::optional<std::filesystem::path> find_git_root(const std::filesystem::path &start_dir);
+std::optional<std::filesystem::path> find_git_root(const std::filesystem::path& start_dir);
 
 // Find AGENTS.md / CLAUDE.md files (hierarchical, multi-convention compatible)
 // Searches: AGENTS.md, .agent-sdk/AGENTS.md, .agents/AGENTS.md,
 //           CLAUDE.md, .claude/CLAUDE.md, .opencode/AGENTS.md
 // Stops at git worktree root (or filesystem root)
-std::vector<std::filesystem::path> find_agent_instructions(const std::filesystem::path &start_dir);
+std::vector<std::filesystem::path> find_agent_instructions(const std::filesystem::path& start_dir);
 }  // namespace config_paths
 
 }  // namespace agent

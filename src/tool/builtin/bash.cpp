@@ -31,7 +31,7 @@ std::vector<ParameterSchema> BashTool::parameters() const {
           {"workdir", "string", "The working directory to run the command in", false, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> BashTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> BashTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string command = args.value("command", "");
     std::string workdir = args.value("workdir", ctx.working_dir);
@@ -208,7 +208,7 @@ std::future<ToolResult> BashTool::execute(const json &args, const ToolContext &c
 // ============================================================================
 
 void register_builtins() {
-  auto &registry = ToolRegistry::instance();
+  auto& registry = ToolRegistry::instance();
 
   registry.register_tool(std::make_shared<BashTool>());
   registry.register_tool(std::make_shared<ReadTool>());

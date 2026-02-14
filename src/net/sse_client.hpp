@@ -20,13 +20,13 @@ struct SseEvent {
 // SSE client for streaming responses
 class SseClient {
  public:
-  explicit SseClient(asio::io_context &io_ctx);
+  explicit SseClient(asio::io_context& io_ctx);
 
   ~SseClient();
 
   // Connect and start streaming
-  void connect(const std::string &url, const std::map<std::string, std::string> &headers, std::function<void(const SseEvent &)> on_event,
-               std::function<void(const std::string &error)> on_error, std::function<void()> on_complete);
+  void connect(const std::string& url, const std::map<std::string, std::string>& headers, std::function<void(const SseEvent&)> on_event,
+               std::function<void(const std::string& error)> on_error, std::function<void()> on_complete);
 
   // Stop streaming
   void stop();

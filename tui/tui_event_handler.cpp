@@ -32,7 +32,7 @@ void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) 
       return;
     }
   }
-  
+
   // 文件路径菜单补全
   if (state.show_file_path_menu) {
     int count = static_cast<int>(state.file_path_matches.size());
@@ -42,20 +42,20 @@ void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) 
       if (at_pos != std::string::npos) {
         std::string before_at = state.input_text.substr(0, at_pos + 1);
         std::string path_to_insert = state.file_path_matches[state.file_path_menu_selected].path;
-        
+
         // 如果是目录，添加斜杠
         if (state.file_path_matches[state.file_path_menu_selected].is_directory) {
           path_to_insert += "/";
         }
-        
+
         // 添加一个空格到路径后面
         path_to_insert += " ";
-        
+
         state.input_text = before_at + path_to_insert;
         state.input_cursor_pos = static_cast<int>(state.input_text.size());
         state.show_file_path_menu = false;
         state.file_path_matches.clear();
-        return; // 不继续处理提交
+        return;  // 不继续处理提交
       }
     }
   }
@@ -580,7 +580,7 @@ bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& scre
       }
     }
   }
-  
+
   // 文件路径菜单导航
   if (state.show_file_path_menu && !state.show_cmd_menu) {  // 只在命令菜单未显示时处理
     int count = static_cast<int>(state.file_path_matches.size());
@@ -600,15 +600,15 @@ bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& scre
           if (at_pos != std::string::npos) {
             std::string before_at = state.input_text.substr(0, at_pos + 1);
             std::string path_to_insert = state.file_path_matches[state.file_path_menu_selected].path;
-            
+
             // 如果是目录，添加斜杠
             if (state.file_path_matches[state.file_path_menu_selected].is_directory) {
               path_to_insert += "/";
             }
-            
+
             // 添加一个空格到路径后面
             path_to_insert += " ";
-            
+
             state.input_text = before_at + path_to_insert;
             state.input_cursor_pos = static_cast<int>(state.input_text.size());
             state.show_file_path_menu = false;

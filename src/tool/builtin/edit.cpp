@@ -21,7 +21,7 @@ std::vector<ParameterSchema> EditTool::parameters() const {
           {"replaceAll", "boolean", "Replace all occurrences (default false)", false, json(false), std::nullopt}};
 }
 
-std::future<ToolResult> EditTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> EditTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string file_path = args.value("filePath", "");
     std::string old_str = args.value("oldString", "");

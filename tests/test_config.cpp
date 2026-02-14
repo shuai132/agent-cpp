@@ -135,7 +135,7 @@ TEST(ConfigTest, SaveAndLoadMcpServers) {
   ASSERT_EQ(loaded.mcp_servers.size(), 2u);
 
   // 验证本地服务器
-  const auto &s0 = loaded.mcp_servers[0];
+  const auto& s0 = loaded.mcp_servers[0];
   EXPECT_EQ(s0.name, "my-server");
   EXPECT_EQ(s0.type, "local");
   EXPECT_EQ(s0.command, "npx");
@@ -147,7 +147,7 @@ TEST(ConfigTest, SaveAndLoadMcpServers) {
   EXPECT_TRUE(s0.enabled);
 
   // 验证远程服务器
-  const auto &s1 = loaded.mcp_servers[1];
+  const auto& s1 = loaded.mcp_servers[1];
   EXPECT_EQ(s1.name, "remote-server");
   EXPECT_EQ(s1.type, "remote");
   EXPECT_EQ(s1.url, "https://example.com/mcp");
@@ -197,7 +197,7 @@ TEST(ConfigTest, SaveAndLoadAgents) {
   // 验证 build 代理
   auto build_opt = loaded.get_agent("build");
   ASSERT_TRUE(build_opt.has_value());
-  const auto &b = *build_opt;
+  const auto& b = *build_opt;
   EXPECT_EQ(b.id, "build");
   EXPECT_EQ(b.type, AgentType::Build);
   EXPECT_EQ(b.model, "claude-sonnet-4-20250514");
@@ -215,7 +215,7 @@ TEST(ConfigTest, SaveAndLoadAgents) {
   // 验证 explore 代理
   auto explore_opt = loaded.get_agent("explore");
   ASSERT_TRUE(explore_opt.has_value());
-  const auto &e = *explore_opt;
+  const auto& e = *explore_opt;
   EXPECT_EQ(e.id, "explore");
   EXPECT_EQ(e.type, AgentType::Explore);
   EXPECT_EQ(e.model, "gpt-4o");

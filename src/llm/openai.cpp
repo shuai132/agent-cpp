@@ -4,7 +4,7 @@
 
 namespace agent::llm {
 
-OpenAIProvider::OpenAIProvider(const ProviderConfig &config, asio::io_context &io_ctx) : config_(config), io_ctx_(io_ctx), http_client_(io_ctx) {
+OpenAIProvider::OpenAIProvider(const ProviderConfig& config, asio::io_context& io_ctx) : config_(config), io_ctx_(io_ctx), http_client_(io_ctx) {
   if (!config.base_url.empty()) {
     base_url_ = config.base_url;
   }
@@ -19,7 +19,7 @@ std::vector<ModelInfo> OpenAIProvider::models() const {
   };
 }
 
-std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest &request) {
+std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest& request) {
   auto promise = std::make_shared<std::promise<LlmResponse>>();
   auto future = promise->get_future();
 
@@ -36,7 +36,7 @@ std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest &request) {
   }
 
   // Add any custom headers
-  for (const auto &[key, value] : config_.headers) {
+  for (const auto& [key, value] : config_.headers) {
     options.headers[key] = value;
   }
 
@@ -72,8 +72,8 @@ std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest &request) {
       Message msg(Role::Assistant, "");
 
       if (j.contains("choices") && !j["choices"].empty()) {
-        auto &choice = j["choices"][0];
-        auto &message = choice["message"];
+        auto& choice = j["choices"][0];
+        auto& message = choice["message"];
 
         // Parse text content
         if (message.contains("content") && !message["content"].is_null()) {
@@ -82,7 +82,7 @@ std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest &request) {
 
         // Parse tool calls
         if (message.contains("tool_calls")) {
-          for (const auto &tc : message["tool_calls"]) {
+          for (const auto& tc : message["tool_calls"]) {
             std::string id = tc.value("id", "");
             std::string name = tc["function"].value("name", "");
             json arguments;
@@ -121,7 +121,7 @@ std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest &request) {
       msg.set_usage(result.usage);
       result.message = std::move(msg);
 
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       result.error = std::string("Parse error: ") + e.what();
     }
 
@@ -131,7 +131,7 @@ std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest &request) {
   return future;
 }
 
-void OpenAIProvider::stream(const LlmRequest &request, StreamCallback callback, std::function<void()> on_complete) {
+void OpenAIProvider::stream(const LlmRequest& request, StreamCallback callback, std::function<void()> on_complete) {
   auto body = request.to_openai_format();
   body["stream"] = true;
 
@@ -142,7 +142,7 @@ void OpenAIProvider::stream(const LlmRequest &request, StreamCallback callback, 
     headers["OpenAI-Organization"] = *config_.organization;
   }
 
-  for (const auto &[key, value] : config_.headers) {
+  for (const auto& [key, value] : config_.headers) {
     headers[key] = value;
   }
 
@@ -164,7 +164,7 @@ void OpenAIProvider::stream(const LlmRequest &request, StreamCallback callback, 
   // Use streaming HTTP request for real-time SSE processing
   http_client_.request_stream(
       base_url_ + "/v1/chat/completions", options,
-      [this, shared_callback, sse_buffer](const std::string &chunk) {
+      [this, shared_callback, sse_buffer](const std::string& chunk) {
         // Accumulate chunk into SSE buffer and parse complete events
         *sse_buffer += chunk;
 
@@ -197,7 +197,7 @@ void OpenAIProvider::stream(const LlmRequest &request, StreamCallback callback, 
           }
         }
       },
-      [shared_callback, shared_complete](int status_code, const std::string &error) {
+      [shared_callback, shared_complete](int status_code, const std::string& error) {
         if (!error.empty()) {
           StreamError err;
           err.message = error;
@@ -207,10 +207,10 @@ void OpenAIProvider::stream(const LlmRequest &request, StreamCallback callback, 
       });
 }
 
-void OpenAIProvider::parse_sse_event(const std::string &data, StreamCallback &callback) {
+void OpenAIProvider::parse_sse_event(const std::string& data, StreamCallback& callback) {
   if (data == "[DONE]") {
     // Emit finish events for any remaining tool calls
-    for (auto &[index, tc] : tool_calls_) {
+    for (auto& [index, tc] : tool_calls_) {
       if (!tc.id.empty()) {
         try {
           json args = tc.args_json.empty() ? json::object() : json::parse(tc.args_json);
@@ -246,7 +246,7 @@ void OpenAIProvider::parse_sse_event(const std::string &data, StreamCallback &ca
 
       // Get finish reason from the choice if available
       if (j.contains("choices") && !j["choices"].empty()) {
-        auto &choice = j["choices"][0];
+        auto& choice = j["choices"][0];
         std::string finish_reason = choice.value("finish_reason", "");
         if (finish_reason == "tool_calls") {
           finish.reason = FinishReason::ToolCalls;
@@ -267,8 +267,8 @@ void OpenAIProvider::parse_sse_event(const std::string &data, StreamCallback &ca
       return;
     }
 
-    auto &choice = j["choices"][0];
-    auto &delta = choice["delta"];
+    auto& choice = j["choices"][0];
+    auto& delta = choice["delta"];
 
     // Check finish reason
     std::string finish_reason;
@@ -286,7 +286,7 @@ void OpenAIProvider::parse_sse_event(const std::string &data, StreamCallback &ca
 
     // Parse tool call deltas
     if (delta.contains("tool_calls")) {
-      for (const auto &tc : delta["tool_calls"]) {
+      for (const auto& tc : delta["tool_calls"]) {
         int index = tc.value("index", 0);
 
         // New tool call starts with id and function name
@@ -315,7 +315,7 @@ void OpenAIProvider::parse_sse_event(const std::string &data, StreamCallback &ca
     if (!finish_reason.empty()) {
       // If tool calls are pending, emit ToolCallComplete for each
       if (finish_reason == "tool_calls") {
-        for (auto &[index, tc] : tool_calls_) {
+        for (auto& [index, tc] : tool_calls_) {
           if (!tc.id.empty()) {
             try {
               json args = tc.args_json.empty() ? json::object() : json::parse(tc.args_json);
@@ -332,7 +332,7 @@ void OpenAIProvider::parse_sse_event(const std::string &data, StreamCallback &ca
       // The usage chunk will emit FinishStep instead
     }
 
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     spdlog::warn("Failed to parse OpenAI SSE event: {}", e.what());
   }
 }

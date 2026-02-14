@@ -5,9 +5,9 @@
 
 namespace agent::llm {
 
-std::optional<ModelInfo> Provider::get_model(const std::string &model_id) const {
+std::optional<ModelInfo> Provider::get_model(const std::string& model_id) const {
   auto all_models = models();
-  for (const auto &model : all_models) {
+  for (const auto& model : all_models) {
     if (model.id == model_id) {
       return model;
     }
@@ -15,22 +15,22 @@ std::optional<ModelInfo> Provider::get_model(const std::string &model_id) const 
   return std::nullopt;
 }
 
-ProviderFactory &ProviderFactory::instance() {
+ProviderFactory& ProviderFactory::instance() {
   static ProviderFactory instance;
   return instance;
 }
 
-std::shared_ptr<Provider> ProviderFactory::create(const std::string &name, const ProviderConfig &config, asio::io_context &io_ctx) {
+std::shared_ptr<Provider> ProviderFactory::create(const std::string& name, const ProviderConfig& config, asio::io_context& io_ctx) {
   // Ensure default providers are registered
   static bool initialized = false;
   if (!initialized) {
     initialized = true;
     // Register Anthropic provider
-    instance().register_provider("anthropic", [](const ProviderConfig &cfg, asio::io_context &ctx) {
+    instance().register_provider("anthropic", [](const ProviderConfig& cfg, asio::io_context& ctx) {
       return std::make_shared<AnthropicProvider>(cfg, ctx);
     });
     // Register OpenAI provider
-    instance().register_provider("openai", [](const ProviderConfig &cfg, asio::io_context &ctx) {
+    instance().register_provider("openai", [](const ProviderConfig& cfg, asio::io_context& ctx) {
       return std::make_shared<OpenAIProvider>(cfg, ctx);
     });
   }
@@ -42,7 +42,7 @@ std::shared_ptr<Provider> ProviderFactory::create(const std::string &name, const
   return nullptr;
 }
 
-void ProviderFactory::register_provider(const std::string &name, FactoryFunc factory) {
+void ProviderFactory::register_provider(const std::string& name, FactoryFunc factory) {
   factories_[name] = std::move(factory);
 }
 
@@ -66,21 +66,21 @@ json LlmRequest::to_anthropic_format() const {
 
   // Convert messages
   json msgs = json::array();
-  for (const auto &msg : messages) {
+  for (const auto& msg : messages) {
     if (msg.role() == Role::System) continue;  // System handled separately
 
     json m;
     m["role"] = msg.role() == Role::User ? "user" : "assistant";
 
     json content = json::array();
-    for (const auto &part : msg.parts()) {
-      if (auto *text = std::get_if<TextPart>(&part)) {
+    for (const auto& part : msg.parts()) {
+      if (auto* text = std::get_if<TextPart>(&part)) {
         content.push_back({{"type", "text"}, {"text", text->text}});
-      } else if (auto *tc = std::get_if<ToolCallPart>(&part)) {
+      } else if (auto* tc = std::get_if<ToolCallPart>(&part)) {
         content.push_back({{"type", "tool_use"}, {"id", tc->id}, {"name", tc->name}, {"input", tc->arguments}});
-      } else if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+      } else if (auto* tr = std::get_if<ToolResultPart>(&part)) {
         content.push_back({{"type", "tool_result"}, {"tool_use_id", tr->tool_call_id}, {"content", tr->output}, {"is_error", tr->is_error}});
-      } else if (auto *img = std::get_if<ImagePart>(&part)) {
+      } else if (auto* img = std::get_if<ImagePart>(&part)) {
         // Handle base64 images
         if (img->url.starts_with("data:")) {
           auto comma = img->url.find(',');
@@ -107,7 +107,7 @@ json LlmRequest::to_anthropic_format() const {
   // Convert tools
   if (!tools.empty()) {
     json tools_json = json::array();
-    for (const auto &tool : tools) {
+    for (const auto& tool : tools) {
       tools_json.push_back(tool->to_json_schema());
     }
     request["tools"] = tools_json;
@@ -141,7 +141,7 @@ json LlmRequest::to_openai_format() const {
     msgs.push_back({{"role", "system"}, {"content", system_prompt}});
   }
 
-  for (const auto &msg : messages) {
+  for (const auto& msg : messages) {
     if (msg.role() == Role::System) continue;
 
     // OpenAI requires tool results as separate role="tool" messages
@@ -153,7 +153,7 @@ json LlmRequest::to_openai_format() const {
         msgs.push_back({{"role", "user"}, {"content", text}});
       }
 
-      for (const auto *tr : tool_results) {
+      for (const auto* tr : tool_results) {
         json tool_msg;
         tool_msg["role"] = "tool";
         tool_msg["tool_call_id"] = tr->tool_call_id;
@@ -169,7 +169,7 @@ json LlmRequest::to_openai_format() const {
   // Convert tools
   if (!tools.empty()) {
     json tools_json = json::array();
-    for (const auto &tool : tools) {
+    for (const auto& tool : tools) {
       auto schema = tool->to_json_schema();
       // OpenAI uses "parameters" instead of "input_schema"
       json func = {{"name", schema["name"]}, {"description", schema["description"]}};

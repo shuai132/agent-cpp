@@ -23,7 +23,7 @@ std::string SkillTool::description() const {
       "use this tool to load the full skill instructions.\n\n"
       "<available_skills>\n";
 
-  for (const auto &s : skills) {
+  for (const auto& s : skills) {
     desc += "  <skill>\n";
     desc += "    <name>" + s.name + "</name>\n";
     desc += "    <description>" + s.description + "</description>\n";
@@ -42,7 +42,7 @@ std::vector<ParameterSchema> SkillTool::parameters() const {
   return {{"name", "string", "The name of the skill to load (from available_skills)", true, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> SkillTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> SkillTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args]() -> ToolResult {
     std::string name = args.value("name", "");
     if (name.empty()) {
@@ -54,7 +54,7 @@ std::future<ToolResult> SkillTool::execute(const json &args, const ToolContext &
       // List available skills in error message
       auto all = skill::SkillRegistry::instance().all();
       std::string available;
-      for (const auto &s : all) {
+      for (const auto& s : all) {
         if (!available.empty()) available += ", ";
         available += s.name;
       }

@@ -16,28 +16,28 @@ std::string to_string(Role role) {
   return "user";
 }
 
-Role role_from_string(const std::string &str) {
+Role role_from_string(const std::string& str) {
   if (str == "system") return Role::System;
   if (str == "user") return Role::User;
   if (str == "assistant") return Role::Assistant;
   return Role::User;
 }
 
-Message::Message(Role role, const std::string &content) : role_(role) {
+Message::Message(Role role, const std::string& content) : role_(role) {
   if (!content.empty()) {
     parts_.push_back(TextPart{content});
   }
 }
 
-Message Message::system(const std::string &content) {
+Message Message::system(const std::string& content) {
   return Message(Role::System, content);
 }
 
-Message Message::user(const std::string &content) {
+Message Message::user(const std::string& content) {
   return Message(Role::User, content);
 }
 
-Message Message::assistant(const std::string &content) {
+Message Message::assistant(const std::string& content) {
   return Message(Role::Assistant, content);
 }
 
@@ -45,22 +45,22 @@ void Message::add_part(MessagePart part) {
   parts_.push_back(std::move(part));
 }
 
-void Message::add_text(const std::string &text) {
+void Message::add_text(const std::string& text) {
   parts_.push_back(TextPart{text});
 }
 
-void Message::add_tool_call(const std::string &id, const std::string &name, const json &args) {
+void Message::add_tool_call(const std::string& id, const std::string& name, const json& args) {
   parts_.push_back(ToolCallPart{id, name, args, false, false});
 }
 
-void Message::add_tool_result(const std::string &call_id, const std::string &name, const std::string &output, bool is_error) {
+void Message::add_tool_result(const std::string& call_id, const std::string& name, const std::string& output, bool is_error) {
   parts_.push_back(ToolResultPart{call_id, name, output, is_error, std::nullopt, json::object(), false, std::nullopt});
 }
 
 std::string Message::text() const {
   std::string result;
-  for (const auto &part : parts_) {
-    if (auto *text = std::get_if<TextPart>(&part)) {
+  for (const auto& part : parts_) {
+    if (auto* text = std::get_if<TextPart>(&part)) {
       if (!result.empty()) result += "\n";
       result += text->text;
     }
@@ -68,40 +68,40 @@ std::string Message::text() const {
   return result;
 }
 
-std::vector<ToolCallPart *> Message::tool_calls() {
-  std::vector<ToolCallPart *> result;
-  for (auto &part : parts_) {
-    if (auto *tc = std::get_if<ToolCallPart>(&part)) {
+std::vector<ToolCallPart*> Message::tool_calls() {
+  std::vector<ToolCallPart*> result;
+  for (auto& part : parts_) {
+    if (auto* tc = std::get_if<ToolCallPart>(&part)) {
       result.push_back(tc);
     }
   }
   return result;
 }
 
-std::vector<const ToolCallPart *> Message::tool_calls() const {
-  std::vector<const ToolCallPart *> result;
-  for (const auto &part : parts_) {
-    if (auto *tc = std::get_if<ToolCallPart>(&part)) {
+std::vector<const ToolCallPart*> Message::tool_calls() const {
+  std::vector<const ToolCallPart*> result;
+  for (const auto& part : parts_) {
+    if (auto* tc = std::get_if<ToolCallPart>(&part)) {
       result.push_back(tc);
     }
   }
   return result;
 }
 
-std::vector<ToolResultPart *> Message::tool_results() {
-  std::vector<ToolResultPart *> result;
-  for (auto &part : parts_) {
-    if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+std::vector<ToolResultPart*> Message::tool_results() {
+  std::vector<ToolResultPart*> result;
+  for (auto& part : parts_) {
+    if (auto* tr = std::get_if<ToolResultPart>(&part)) {
       result.push_back(tr);
     }
   }
   return result;
 }
 
-std::vector<const ToolResultPart *> Message::tool_results() const {
-  std::vector<const ToolResultPart *> result;
-  for (const auto &part : parts_) {
-    if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+std::vector<const ToolResultPart*> Message::tool_results() const {
+  std::vector<const ToolResultPart*> result;
+  for (const auto& part : parts_) {
+    if (auto* tr = std::get_if<ToolResultPart>(&part)) {
       result.push_back(tr);
     }
   }
@@ -124,19 +124,19 @@ json Message::to_json() const {
   j["session_id"] = session_id_;
 
   json parts_json = json::array();
-  for (const auto &part : parts_) {
+  for (const auto& part : parts_) {
     json part_json;
-    if (auto *text = std::get_if<TextPart>(&part)) {
+    if (auto* text = std::get_if<TextPart>(&part)) {
       part_json["type"] = "text";
       part_json["text"] = text->text;
-    } else if (auto *tc = std::get_if<ToolCallPart>(&part)) {
+    } else if (auto* tc = std::get_if<ToolCallPart>(&part)) {
       part_json["type"] = "tool_call";
       part_json["id"] = tc->id;
       part_json["name"] = tc->name;
       part_json["arguments"] = tc->arguments;
       part_json["started"] = tc->started;
       part_json["completed"] = tc->completed;
-    } else if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+    } else if (auto* tr = std::get_if<ToolResultPart>(&part)) {
       part_json["type"] = "tool_result";
       part_json["tool_call_id"] = tr->tool_call_id;
       part_json["tool_name"] = tr->tool_name;
@@ -158,7 +158,7 @@ json Message::to_json() const {
   return j;
 }
 
-Message Message::from_json(const json &j) {
+Message Message::from_json(const json& j) {
   Message msg;
   msg.id_ = j.value("id", UUID::generate());
   msg.role_ = role_from_string(j.value("role", "user"));
@@ -174,7 +174,7 @@ Message Message::from_json(const json &j) {
   msg.session_id_ = j.value("session_id", "");
 
   if (j.contains("parts")) {
-    for (const auto &part_json : j["parts"]) {
+    for (const auto& part_json : j["parts"]) {
       std::string type = part_json.value("type", "");
       if (type == "text") {
         msg.parts_.push_back(TextPart{part_json["text"]});
@@ -190,7 +190,7 @@ Message Message::from_json(const json &j) {
   }
 
   if (j.contains("usage")) {
-    const auto &u = j["usage"];
+    const auto& u = j["usage"];
     msg.usage_.input_tokens = u.value("input_tokens", 0);
     msg.usage_.output_tokens = u.value("output_tokens", 0);
     msg.usage_.cache_read_tokens = u.value("cache_read_tokens", 0);
@@ -212,20 +212,20 @@ json Message::to_api_format() const {
   // Collect content
   json content = json::array();
 
-  for (const auto &part : parts_) {
-    if (auto *text = std::get_if<TextPart>(&part)) {
+  for (const auto& part : parts_) {
+    if (auto* text = std::get_if<TextPart>(&part)) {
       content.push_back({{"type", "text"}, {"text", text->text}});
-    } else if (auto *tc = std::get_if<ToolCallPart>(&part)) {
+    } else if (auto* tc = std::get_if<ToolCallPart>(&part)) {
       // Tool calls go into a separate field in the message
       if (!msg.contains("tool_calls")) {
         msg["tool_calls"] = json::array();
       }
       msg["tool_calls"].push_back({{"id", tc->id}, {"type", "function"}, {"function", {{"name", tc->name}, {"arguments", tc->arguments.dump()}}}});
-    } else if (auto *tr = std::get_if<ToolResultPart>(&part)) {
+    } else if (auto* tr = std::get_if<ToolResultPart>(&part)) {
       // Tool results are separate messages in OpenAI format
       // but we include them here for completeness
       content.push_back({{"type", "tool_result"}, {"tool_use_id", tr->tool_call_id}, {"content", tr->output}, {"is_error", tr->is_error}});
-    } else if (auto *img = std::get_if<ImagePart>(&part)) {
+    } else if (auto* img = std::get_if<ImagePart>(&part)) {
       content.push_back({{"type", "image_url"}, {"image_url", {{"url", img->url}}}});
     }
   }
@@ -241,13 +241,13 @@ json Message::to_api_format() const {
 }
 
 // InMemoryMessageStore implementation
-void InMemoryMessageStore::save(const Message &msg) {
+void InMemoryMessageStore::save(const Message& msg) {
   std::lock_guard lock(mutex_);
   messages_[msg.id()] = msg;
   session_messages_[msg.session_id()].push_back(msg.id());
 }
 
-std::optional<Message> InMemoryMessageStore::get(const MessageId &id) {
+std::optional<Message> InMemoryMessageStore::get(const MessageId& id) {
   std::lock_guard lock(mutex_);
   auto it = messages_.find(id);
   if (it != messages_.end()) {
@@ -256,12 +256,12 @@ std::optional<Message> InMemoryMessageStore::get(const MessageId &id) {
   return std::nullopt;
 }
 
-std::vector<Message> InMemoryMessageStore::list(const SessionId &session_id) {
+std::vector<Message> InMemoryMessageStore::list(const SessionId& session_id) {
   std::lock_guard lock(mutex_);
   std::vector<Message> result;
   auto it = session_messages_.find(session_id);
   if (it != session_messages_.end()) {
-    for (const auto &id : it->second) {
+    for (const auto& id : it->second) {
       auto msg_it = messages_.find(id);
       if (msg_it != messages_.end()) {
         result.push_back(msg_it->second);
@@ -271,17 +271,17 @@ std::vector<Message> InMemoryMessageStore::list(const SessionId &session_id) {
   return result;
 }
 
-void InMemoryMessageStore::update(const Message &msg) {
+void InMemoryMessageStore::update(const Message& msg) {
   std::lock_guard lock(mutex_);
   messages_[msg.id()] = msg;
 }
 
-void InMemoryMessageStore::remove(const MessageId &id) {
+void InMemoryMessageStore::remove(const MessageId& id) {
   std::lock_guard lock(mutex_);
   auto it = messages_.find(id);
   if (it != messages_.end()) {
     // Remove from session list
-    auto &session_msgs = session_messages_[it->second.session_id()];
+    auto& session_msgs = session_messages_[it->second.session_id()];
     session_msgs.erase(std::remove(session_msgs.begin(), session_msgs.end(), id), session_msgs.end());
     messages_.erase(it);
   }

@@ -36,7 +36,7 @@ json Tool::to_json_schema() const {
   json properties;
   json required_props = json::array();
 
-  for (const auto &param : parameters()) {
+  for (const auto& param : parameters()) {
     properties[param.name] = param.to_json_schema();
     if (param.required) {
       required_props.push_back(param.name);
@@ -48,10 +48,10 @@ json Tool::to_json_schema() const {
   return schema;
 }
 
-Result<json> Tool::validate_args(const json &args) const {
+Result<json> Tool::validate_args(const json& args) const {
   auto params = parameters();
 
-  for (const auto &param : params) {
+  for (const auto& param : params) {
     if (param.required && !args.contains(param.name)) {
       return Result<json>::failure("Missing required parameter: " + param.name);
     }
@@ -64,7 +64,7 @@ Result<json> Tool::validate_args(const json &args) const {
 SimpleTool::SimpleTool(std::string id, std::string description) : id_(std::move(id)), description_(std::move(description)) {}
 
 // Tool Registry
-ToolRegistry &ToolRegistry::instance() {
+ToolRegistry& ToolRegistry::instance() {
   static ToolRegistry instance;
   return instance;
 }
@@ -74,12 +74,12 @@ void ToolRegistry::register_tool(std::shared_ptr<Tool> tool) {
   tools_[tool->id()] = std::move(tool);
 }
 
-void ToolRegistry::unregister_tool(const std::string &id) {
+void ToolRegistry::unregister_tool(const std::string& id) {
   std::lock_guard lock(mutex_);
   tools_.erase(id);
 }
 
-std::shared_ptr<Tool> ToolRegistry::get(const std::string &id) const {
+std::shared_ptr<Tool> ToolRegistry::get(const std::string& id) const {
   std::lock_guard lock(mutex_);
   auto it = tools_.find(id);
   if (it != tools_.end()) {
@@ -92,21 +92,21 @@ std::vector<std::shared_ptr<Tool>> ToolRegistry::all() const {
   std::lock_guard lock(mutex_);
   std::vector<std::shared_ptr<Tool>> result;
   result.reserve(tools_.size());
-  for (const auto &[id, tool] : tools_) {
+  for (const auto& [id, tool] : tools_) {
     result.push_back(tool);
   }
   return result;
 }
 
-std::vector<std::shared_ptr<Tool>> ToolRegistry::for_agent(const AgentConfig &agent) const {
+std::vector<std::shared_ptr<Tool>> ToolRegistry::for_agent(const AgentConfig& agent) const {
   auto all_tools = all();
   std::vector<std::shared_ptr<Tool>> result;
 
-  for (const auto &tool : all_tools) {
+  for (const auto& tool : all_tools) {
     bool allowed = true;
 
     // Check denied list
-    for (const auto &denied : agent.denied_tools) {
+    for (const auto& denied : agent.denied_tools) {
       if (tool->id() == denied) {
         allowed = false;
         break;
@@ -116,7 +116,7 @@ std::vector<std::shared_ptr<Tool>> ToolRegistry::for_agent(const AgentConfig &ag
     // Check allowed list (if not empty, only allow listed tools)
     if (!agent.allowed_tools.empty()) {
       allowed = false;
-      for (const auto &allowed_tool : agent.allowed_tools) {
+      for (const auto& allowed_tool : agent.allowed_tools) {
         if (tool->id() == allowed_tool) {
           allowed = true;
           break;
@@ -135,7 +135,7 @@ std::vector<std::shared_ptr<Tool>> ToolRegistry::for_agent(const AgentConfig &ag
 // Truncation helpers
 namespace Truncate {
 
-TruncateResult output(const std::string &text, size_t max_lines, size_t max_bytes) {
+TruncateResult output(const std::string& text, size_t max_lines, size_t max_bytes) {
   TruncateResult result;
   result.truncated = false;
 
@@ -180,7 +180,7 @@ TruncateResult output(const std::string &text, size_t max_lines, size_t max_byte
   return result;
 }
 
-TruncateResult save_and_truncate(const std::string &text, const std::string &tool_name, size_t max_lines, size_t max_bytes) {
+TruncateResult save_and_truncate(const std::string& text, const std::string& tool_name, size_t max_lines, size_t max_bytes) {
   auto truncated = output(text, max_lines, max_bytes);
 
   if (truncated.truncated) {

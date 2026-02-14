@@ -36,15 +36,15 @@ struct ParseResult {
 //   - lowercase alphanumeric with single hyphen separators
 //   - No leading/trailing hyphens, no consecutive hyphens
 //   - Must match: ^[a-z0-9]+(-[a-z0-9]+)*$
-bool validate_skill_name(const std::string &name);
+bool validate_skill_name(const std::string& name);
 
 // Parse a SKILL.md file
-ParseResult parse_skill_file(const std::filesystem::path &path);
+ParseResult parse_skill_file(const std::filesystem::path& path);
 
 // Skill registry — singleton that discovers and stores available skills
 class SkillRegistry {
  public:
-  static SkillRegistry &instance();
+  static SkillRegistry& instance();
 
   // Discover skills from all standard locations:
   //   Project-local (traversing up from start_dir to git root):
@@ -58,10 +58,10 @@ class SkillRegistry {
   //     ~/.claude/skills/*/SKILL.md
   //     ~/.config/opencode/skills/*/SKILL.md
   //   Additional custom paths from config
-  void discover(const std::filesystem::path &start_dir, const std::vector<std::filesystem::path> &extra_paths = {});
+  void discover(const std::filesystem::path& start_dir, const std::vector<std::filesystem::path>& extra_paths = {});
 
   // Get a skill by name
-  std::optional<SkillInfo> get(const std::string &name) const;
+  std::optional<SkillInfo> get(const std::string& name) const;
 
   // Get all discovered skills
   std::vector<SkillInfo> all() const;
@@ -76,7 +76,7 @@ class SkillRegistry {
   SkillRegistry() = default;
 
   // Scan a single directory for skills/*/SKILL.md
-  void scan_skills_dir(const std::filesystem::path &skills_dir);
+  void scan_skills_dir(const std::filesystem::path& skills_dir);
 
   // Register a skill (first-wins dedup by name)
   void register_skill(SkillInfo skill);

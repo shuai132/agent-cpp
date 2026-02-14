@@ -30,7 +30,7 @@ std::string to_string(ClientState state) {
 // McpClient
 // ============================================================
 
-McpClient::McpClient(const McpServerConfig &config) : config_(config) {
+McpClient::McpClient(const McpServerConfig& config) : config_(config) {
   // Create transport based on server type
   if (config.type == "local" || config.type == "stdio") {
     transport_ = std::make_unique<StdioTransport>(config.command, config.args, config.env);
@@ -65,7 +65,7 @@ std::future<bool> McpClient::connect() {
     }
 
     // Set notification handler
-    transport_->set_notification_handler([this](const std::string &method, const json &params) {
+    transport_->set_notification_handler([this](const std::string& method, const json& params) {
       spdlog::debug("[MCP] Notification from '{}': {} {}", config_.name, method, params.dump());
 
       // Handle tools/list_changed notification
@@ -118,9 +118,9 @@ bool McpClient::initialize() {
 
     // Parse server capabilities
     if (resp.result.has_value()) {
-      auto &result = resp.result.value();
+      auto& result = resp.result.value();
       if (result.contains("capabilities")) {
-        auto &caps = result["capabilities"];
+        auto& caps = result["capabilities"];
         capabilities_.supports_tools = caps.contains("tools");
         capabilities_.supports_resources = caps.contains("resources");
         capabilities_.supports_prompts = caps.contains("prompts");
@@ -128,7 +128,7 @@ bool McpClient::initialize() {
       }
 
       if (result.contains("serverInfo")) {
-        auto &info = result["serverInfo"];
+        auto& info = result["serverInfo"];
         spdlog::info("[MCP] Server '{}' info: {} v{}", config_.name, info.value("name", "unknown"), info.value("version", "unknown"));
       }
     }
@@ -139,7 +139,7 @@ bool McpClient::initialize() {
     transport_->send_notification(notif);
 
     return true;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     spdlog::error("[MCP] Initialize exception for '{}': {}", config_.name, e.what());
     return false;
   }
@@ -166,7 +166,7 @@ std::vector<McpToolInfo> McpClient::list_tools() {
     }
 
     if (resp.result.has_value() && resp.result->contains("tools")) {
-      for (const auto &tool_json : (*resp.result)["tools"]) {
+      for (const auto& tool_json : (*resp.result)["tools"]) {
         McpToolInfo info;
         info.name = tool_json.value("name", "");
         info.description = tool_json.value("description", "");
@@ -180,14 +180,14 @@ std::vector<McpToolInfo> McpClient::list_tools() {
     }
 
     spdlog::info("[MCP] Server '{}' provides {} tools", config_.name, tools.size());
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     spdlog::error("[MCP] tools/list exception for '{}': {}", config_.name, e.what());
   }
 
   return tools;
 }
 
-std::future<json> McpClient::call_tool(const std::string &name, const json &arguments) {
+std::future<json> McpClient::call_tool(const std::string& name, const json& arguments) {
   return std::async(std::launch::async, [this, name, arguments]() -> json {
     if (state_ != ClientState::Ready) {
       return json{{"error", "MCP server not ready"}};
@@ -211,7 +211,7 @@ std::future<json> McpClient::call_tool(const std::string &name, const json &argu
       }
 
       return json{{"content", json::array()}};
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       return json{{"isError", true}, {"content", json::array({json{{"type", "text"}, {"text", std::string("Exception: ") + e.what()}}})}};
     }
   });
@@ -221,7 +221,7 @@ std::future<json> McpClient::call_tool(const std::string &name, const json &argu
 // McpToolBridge — wraps MCP tool as local Tool
 // ============================================================
 
-McpToolBridge::McpToolBridge(std::shared_ptr<McpClient> client, const McpToolInfo &tool_info)
+McpToolBridge::McpToolBridge(std::shared_ptr<McpClient> client, const McpToolInfo& tool_info)
     : SimpleTool("mcp_" + client->server_name() + "_" + tool_info.name, "[MCP:" + client->server_name() + "] " + tool_info.description),
       client_(std::move(client)),
       tool_info_(tool_info) {}
@@ -231,7 +231,7 @@ std::vector<ParameterSchema> McpToolBridge::parameters() const {
 
   // Convert JSON Schema properties to ParameterSchema
   if (tool_info_.input_schema.contains("properties")) {
-    auto &props = tool_info_.input_schema["properties"];
+    auto& props = tool_info_.input_schema["properties"];
     auto required_fields = tool_info_.input_schema.value("required", json::array());
 
     for (auto it = props.begin(); it != props.end(); ++it) {
@@ -242,7 +242,7 @@ std::vector<ParameterSchema> McpToolBridge::parameters() const {
 
       // Check if required
       bool is_required = false;
-      for (const auto &req : required_fields) {
+      for (const auto& req : required_fields) {
         if (req.get<std::string>() == param.name) {
           is_required = true;
           break;
@@ -256,7 +256,7 @@ std::vector<ParameterSchema> McpToolBridge::parameters() const {
 
       if (it.value().contains("enum")) {
         std::vector<std::string> enum_vals;
-        for (const auto &v : it.value()["enum"]) {
+        for (const auto& v : it.value()["enum"]) {
           enum_vals.push_back(v.get<std::string>());
         }
         param.enum_values = std::move(enum_vals);
@@ -269,7 +269,7 @@ std::vector<ParameterSchema> McpToolBridge::parameters() const {
   return params;
 }
 
-std::future<ToolResult> McpToolBridge::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> McpToolBridge::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [this, args]() -> ToolResult {
     if (!client_ || !client_->is_ready()) {
       return ToolResult::error("MCP server '" + client_->server_name() + "' is not ready");
@@ -284,7 +284,7 @@ std::future<ToolResult> McpToolBridge::execute(const json &args, const ToolConte
       std::string output;
 
       if (result.contains("content")) {
-        for (const auto &content : result["content"]) {
+        for (const auto& content : result["content"]) {
           std::string type = content.value("type", "text");
           if (type == "text") {
             if (!output.empty()) output += "\n";
@@ -301,7 +301,7 @@ std::future<ToolResult> McpToolBridge::execute(const json &args, const ToolConte
         return ToolResult::error(output);
       }
       return ToolResult::success(output);
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       return ToolResult::error(std::string("MCP tool execution failed: ") + e.what());
     }
   });
@@ -311,15 +311,15 @@ std::future<ToolResult> McpToolBridge::execute(const json &args, const ToolConte
 // McpManager — singleton
 // ============================================================
 
-McpManager &McpManager::instance() {
+McpManager& McpManager::instance() {
   static McpManager instance;
   return instance;
 }
 
-void McpManager::initialize(const std::vector<McpServerConfig> &servers) {
+void McpManager::initialize(const std::vector<McpServerConfig>& servers) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  for (const auto &config : servers) {
+  for (const auto& config : servers) {
     if (!config.enabled) {
       spdlog::info("[MCP] Skipping disabled server '{}'", config.name);
       continue;
@@ -337,7 +337,7 @@ void McpManager::connect_all() {
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    for (auto &[name, client] : clients_) {
+    for (auto& [name, client] : clients_) {
       futures.push_back(client->connect());
       names.push_back(name);
     }
@@ -352,7 +352,7 @@ void McpManager::connect_all() {
       } else {
         spdlog::warn("[MCP] Failed to connect to server '{}'", names[i]);
       }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       spdlog::error("[MCP] Exception connecting to '{}': {}", names[i], e.what());
     }
   }
@@ -362,13 +362,13 @@ void McpManager::disconnect_all() {
   unregister_tools();
 
   std::lock_guard<std::mutex> lock(mutex_);
-  for (auto &[name, client] : clients_) {
+  for (auto& [name, client] : clients_) {
     client->disconnect();
   }
   clients_.clear();
 }
 
-std::shared_ptr<McpClient> McpManager::get_client(const std::string &name) const {
+std::shared_ptr<McpClient> McpManager::get_client(const std::string& name) const {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = clients_.find(name);
   if (it != clients_.end()) {
@@ -380,7 +380,7 @@ std::shared_ptr<McpClient> McpManager::get_client(const std::string &name) const
 std::vector<std::shared_ptr<McpClient>> McpManager::all_clients() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<std::shared_ptr<McpClient>> result;
-  for (const auto &[name, client] : clients_) {
+  for (const auto& [name, client] : clients_) {
     result.push_back(client);
   }
   return result;
@@ -391,13 +391,13 @@ void McpManager::register_tools() {
   unregister_tools();
 
   std::lock_guard<std::mutex> lock(mutex_);
-  auto &registry = ToolRegistry::instance();
+  auto& registry = ToolRegistry::instance();
 
-  for (auto &[name, client] : clients_) {
+  for (auto& [name, client] : clients_) {
     if (!client->is_ready()) continue;
 
     auto tools = client->list_tools();
-    for (const auto &tool_info : tools) {
+    for (const auto& tool_info : tools) {
       auto bridge = std::make_shared<McpToolBridge>(client, tool_info);
       std::string tool_id = bridge->id();
       registry.register_tool(bridge);
@@ -408,8 +408,8 @@ void McpManager::register_tools() {
 }
 
 void McpManager::unregister_tools() {
-  auto &registry = ToolRegistry::instance();
-  for (const auto &id : registered_tool_ids_) {
+  auto& registry = ToolRegistry::instance();
+  for (const auto& id : registered_tool_ids_) {
     registry.unregister_tool(id);
   }
   registered_tool_ids_.clear();

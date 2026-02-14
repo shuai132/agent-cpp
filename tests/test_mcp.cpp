@@ -206,9 +206,9 @@ TEST(McpToolBridgeTest, ParameterConversion) {
   ASSERT_EQ(params.size(), 2);
 
   // 查找各个参数（顺序可能因 JSON 对象迭代顺序而异）
-  const ParameterSchema *path_param = nullptr;
-  const ParameterSchema *encoding_param = nullptr;
-  for (const auto &p : params) {
+  const ParameterSchema* path_param = nullptr;
+  const ParameterSchema* encoding_param = nullptr;
+  for (const auto& p : params) {
     if (p.name == "path") path_param = &p;
     if (p.name == "encoding") encoding_param = &p;
   }
@@ -257,14 +257,14 @@ TEST(McpToolBridgeTest, EmptySchema) {
 // ============================================================
 
 TEST(McpManagerTest, Singleton) {
-  auto &mgr1 = McpManager::instance();
-  auto &mgr2 = McpManager::instance();
+  auto& mgr1 = McpManager::instance();
+  auto& mgr2 = McpManager::instance();
 
   EXPECT_EQ(&mgr1, &mgr2);
 }
 
 TEST(McpManagerTest, InitializeWithEmptyConfig) {
-  auto &mgr = McpManager::instance();
+  auto& mgr = McpManager::instance();
 
   // 先断开并清理之前的状态
   mgr.disconnect_all();
@@ -287,7 +287,7 @@ TEST(McpManagerTest, InitializeWithEmptyConfig) {
 }
 
 TEST(McpManagerTest, InitializeWithDisabledServer) {
-  auto &mgr = McpManager::instance();
+  auto& mgr = McpManager::instance();
 
   // 先清理
   mgr.disconnect_all();
@@ -313,7 +313,7 @@ TEST(McpManagerTest, InitializeWithDisabledServer) {
 }
 
 TEST(McpManagerTest, InitializeWithEnabledServer) {
-  auto &mgr = McpManager::instance();
+  auto& mgr = McpManager::instance();
 
   // 先清理
   mgr.disconnect_all();

@@ -18,7 +18,7 @@ std::vector<ParameterSchema> WriteTool::parameters() const {
           {"content", "string", "The content to write to the file", true, std::nullopt, std::nullopt}};
 }
 
-std::future<ToolResult> WriteTool::execute(const json &args, const ToolContext &ctx) {
+std::future<ToolResult> WriteTool::execute(const json& args, const ToolContext& ctx) {
   return std::async(std::launch::async, [args, ctx]() -> ToolResult {
     std::string file_path = args.value("filePath", "");
     std::string content = args.value("content", "");

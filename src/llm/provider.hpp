@@ -46,7 +46,7 @@ struct StreamError {
 using StreamEvent = std::variant<TextDelta, ToolCallDelta, ToolCallComplete, FinishStep, StreamError>;
 
 // Stream callback
-using StreamCallback = std::function<void(const StreamEvent &)>;
+using StreamCallback = std::function<void(const StreamEvent&)>;
 
 // LLM request
 struct LlmRequest {
@@ -92,13 +92,13 @@ class Provider {
   virtual std::vector<ModelInfo> models() const = 0;
 
   // Get model info
-  virtual std::optional<ModelInfo> get_model(const std::string &model_id) const;
+  virtual std::optional<ModelInfo> get_model(const std::string& model_id) const;
 
   // Non-streaming completion
-  virtual std::future<LlmResponse> complete(const LlmRequest &request) = 0;
+  virtual std::future<LlmResponse> complete(const LlmRequest& request) = 0;
 
   // Streaming completion
-  virtual void stream(const LlmRequest &request, StreamCallback callback, std::function<void()> on_complete) = 0;
+  virtual void stream(const LlmRequest& request, StreamCallback callback, std::function<void()> on_complete) = 0;
 
   // Cancel current request
   virtual void cancel() = 0;
@@ -107,15 +107,15 @@ class Provider {
 // Provider factory
 class ProviderFactory {
  public:
-  static ProviderFactory &instance();
+  static ProviderFactory& instance();
 
   // Create provider by name
-  std::shared_ptr<Provider> create(const std::string &name, const ProviderConfig &config, asio::io_context &io_ctx);
+  std::shared_ptr<Provider> create(const std::string& name, const ProviderConfig& config, asio::io_context& io_ctx);
 
   // Register custom provider factory
-  using FactoryFunc = std::function<std::shared_ptr<Provider>(const ProviderConfig &, asio::io_context &)>;
+  using FactoryFunc = std::function<std::shared_ptr<Provider>(const ProviderConfig&, asio::io_context&)>;
 
-  void register_provider(const std::string &name, FactoryFunc factory);
+  void register_provider(const std::string& name, FactoryFunc factory);
 
  private:
   std::map<std::string, FactoryFunc> factories_;
