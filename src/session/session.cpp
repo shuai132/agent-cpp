@@ -320,8 +320,20 @@ void Session::process_stream() {
                 }
                 accumulated_text += e.text;
               } else if constexpr (std::is_same_v<T, llm::ToolCallDelta>) {
-                // Start tracking a new tool call
-                tool_call_builders.push_back({e.id, e.name, e.arguments_delta});
+                // Find existing builder by id and accumulate, or create new
+                bool found_builder = false;
+                if (!e.id.empty()) {
+                  for (auto &builder : tool_call_builders) {
+                    if (builder.id == e.id) {
+                      builder.args_json += e.arguments_delta;
+                      found_builder = true;
+                      break;
+                    }
+                  }
+                }
+                if (!found_builder) {
+                  tool_call_builders.push_back({e.id, e.name, e.arguments_delta});
+                }
               } else if constexpr (std::is_same_v<T, llm::ToolCallComplete>) {
                 // Tool call arguments completed
                 // Find matching builder by id and update with complete args
@@ -384,6 +396,10 @@ void Session::process_stream() {
   for (const auto &builder : tool_call_builders) {
     try {
       json args = json::parse(builder.args_json);
+      if (!args.is_object()) {
+        spdlog::warn("Tool call args is not an object for {}, skipping", builder.name);
+        continue;
+      }
       msg.add_tool_call(builder.id, builder.name, args);
     } catch (...) {
       // Skip invalid tool calls
