@@ -35,8 +35,13 @@ private:
     std::string base_url_ = "https://api.anthropic.com";
     std::string api_version_ = "2023-06-01";
     
-    // Accumulate tool call arguments during streaming
-    std::map<std::string, std::string> tool_call_args_;
+    // Track tool calls during streaming (by index)
+    struct ToolCallInfo {
+        std::string id;
+        std::string name;
+        std::string args_json;
+    };
+    std::map<int, ToolCallInfo> tool_calls_;
 };
 
 }  // namespace agent::llm

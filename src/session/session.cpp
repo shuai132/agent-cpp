@@ -264,13 +264,11 @@ void Session::process_stream() {
                     tool_call_builders.push_back({e.id, e.name, e.arguments_delta});
                 } else if constexpr (std::is_same_v<T, llm::ToolCallComplete>) {
                     // Tool call arguments completed
-                    // Find matching builder and update it with complete args
+                    // Find matching builder by id and update with complete args
                     bool found = false;
                     for (auto& builder : tool_call_builders) {
-                        if (builder.id == e.id || (builder.id.empty() && !e.name.empty() && builder.name == e.name)) {
-                            // Update with complete info
-                            if (builder.id.empty()) builder.id = e.id;
-                            if (builder.name.empty()) builder.name = e.name;
+                        if (!e.id.empty() && builder.id == e.id) {
+                            // Update with complete args
                             builder.args_json = e.arguments.dump();
                             
                             if (on_tool_call_) {

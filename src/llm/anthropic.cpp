@@ -144,7 +144,7 @@ void AnthropicProvider::stream(
     }
     
     // Reset state
-    tool_call_args_.clear();
+    tool_calls_.clear();
     
     net::HttpOptions options;
     options.method = "POST";
@@ -223,8 +223,9 @@ void AnthropicProvider::parse_sse_event(const std::string& data, StreamCallback&
             } else if (delta_type == "input_json_delta") {
                 // Accumulate tool call arguments
                 int index = j.value("index", 0);
-                std::string idx_str = std::to_string(index);
-                tool_call_args_[idx_str] += delta.value("partial_json", "");
+                if (tool_calls_.count(index)) {
+                    tool_calls_[index].args_json += delta.value("partial_json", "");
+                }
             }
         } else if (type == "content_block_start") {
             auto content_block = j["content_block"];
@@ -232,29 +233,27 @@ void AnthropicProvider::parse_sse_event(const std::string& data, StreamCallback&
             
             if (block_type == "tool_use") {
                 int index = j.value("index", 0);
-                std::string idx_str = std::to_string(index);
-                tool_call_args_[idx_str] = "";  // Initialize
+                std::string id = content_block.value("id", "");
+                std::string name = content_block.value("name", "");
                 
-                callback(ToolCallDelta{
-                    content_block["id"],
-                    content_block["name"],
-                    ""
-                });
+                // Store tool call info by index
+                tool_calls_[index] = ToolCallInfo{id, name, ""};
+                
+                callback(ToolCallDelta{id, name, ""});
             }
         } else if (type == "content_block_stop") {
             int index = j.value("index", 0);
-            std::string idx_str = std::to_string(index);
             
-            // If we have accumulated tool call args, emit the complete event
-            auto it = tool_call_args_.find(idx_str);
-            if (it != tool_call_args_.end() && !it->second.empty()) {
+            // If we have a tool call at this index, emit the complete event
+            auto it = tool_calls_.find(index);
+            if (it != tool_calls_.end() && !it->second.id.empty()) {
                 try {
-                    auto args = json::parse(it->second);
-                    // We need the tool call ID and name, which we should have stored
-                    // For now, emit a generic complete
-                    callback(ToolCallComplete{"", "", args});
+                    json args = it->second.args_json.empty() ? 
+                        json::object() : json::parse(it->second.args_json);
+                    callback(ToolCallComplete{it->second.id, it->second.name, args});
                 } catch (...) {
-                    // Invalid JSON, skip
+                    // Invalid JSON, emit empty object
+                    callback(ToolCallComplete{it->second.id, it->second.name, json::object()});
                 }
             }
         } else if (type == "message_delta") {
