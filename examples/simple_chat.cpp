@@ -131,12 +131,12 @@ static void print_history(const std::shared_ptr<Session>& session) {
 // Helper: print help message
 static void print_help() {
   std::cout << "\n--- Available Commands ---\n";
-  std::cout << "  /help, /h        — Show this help message\n";
-  std::cout << "  /s               — List saved sessions\n";
-  std::cout << "  /s <N>           — Load session by number\n";
-  std::cout << "  /s save          — Save current session\n";
-  std::cout << "  /s d [N]         — Delete session (interactive or by number)\n";
-  std::cout << "  quit, exit       — Exit the program\n";
+  std::cout << "  /s, /sessions          — List saved sessions\n";
+  std::cout << "  /s <N>                 — Load session by number\n";
+  std::cout << "  /s save                — Save current session\n";
+  std::cout << "  /s d [N]               — Delete session (interactive or by number)\n";
+  std::cout << "  /h, /help              — Show this help message\n";
+  std::cout << "  /q, /quit              — Exit the program\n";
   std::cout << "--------------------------\n\n";
 }
 
@@ -355,14 +355,14 @@ int main(int argc, char* argv[]) {
 
   // Chat loop
   std::string input;
-  std::cout << "Enter your message (or 'quit' to exit):\n";
-  std::cout << "Commands: /help — show help, /s — sessions management\n\n";
+  std::cout << "Enter your message (or '/q' to exit):\n";
+  std::cout << "Commands: /h — help, /s — sessions, /q — quit\n\n";
 
   while (true) {
     std::cout << "> ";
     std::getline(std::cin, input);
 
-    if (input == "quit" || input == "exit") {
+    if (input == "/quit" || input == "/q") {
       break;
     }
 
@@ -377,13 +377,13 @@ int main(int argc, char* argv[]) {
     }
 
     // Handle /sessions and /s commands
-    if (input == "/sessions" || input == "/s") {
-      handle_sessions_command("", io_ctx, config, store, session);
-      continue;
-    }
-
-    if (input.substr(0, 3) == "/s ") {
-      auto arg = input.substr(3);
+    if (input == "/s" || input == "/sessions" || input.substr(0, 3) == "/s " || input.substr(0, 10) == "/sessions ") {
+      std::string arg;
+      if (input.substr(0, 10) == "/sessions ") {
+        arg = input.substr(10);
+      } else if (input.substr(0, 3) == "/s ") {
+        arg = input.substr(3);
+      }
       handle_sessions_command(arg, io_ctx, config, store, session);
       continue;
     }
