@@ -2,9 +2,11 @@
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <spdlog/spdlog.h>
 
 #include <regex>
 #include <sstream>
+#include <thread>
 
 namespace agent::net {
 
@@ -71,11 +73,53 @@ class HttpClient::Impl {
   }
 
  private:
+  // Helper: close the lowest-layer socket, ignoring errors
+  template <typename Socket>
+  static void close_socket(std::shared_ptr<Socket> socket) {
+    asio::error_code ignored;
+    socket->lowest_layer().close(ignored);
+  }
+
+  static void close_socket(std::shared_ptr<asio::ip::tcp::socket> socket) {
+    asio::error_code ignored;
+    socket->close(ignored);
+  }
+
+  // Start a timeout timer. When it fires, set the timed_out flag and close the socket.
+  template <typename Socket>
+  static std::shared_ptr<asio::steady_timer> start_timeout(asio::io_context &io_ctx, std::chrono::seconds timeout, std::shared_ptr<Socket> socket,
+                                                           std::shared_ptr<bool> timed_out) {
+    auto timer = std::make_shared<asio::steady_timer>(io_ctx);
+    timer->expires_after(timeout);
+    timer->async_wait([socket, timed_out, timer](const asio::error_code &ec) {
+      if (!ec) {
+        // Timer fired (not cancelled) — mark as timed out and close socket
+        *timed_out = true;
+        close_socket(socket);
+      }
+    });
+    return timer;
+  }
+
   void request_https(const ParsedUrl &url, const HttpOptions &options, std::function<void(HttpResponse)> callback) {
     auto socket = std::make_shared<asio::ssl::stream<asio::ip::tcp::socket>>(io_ctx_, ssl_ctx_);
     auto response = std::make_shared<HttpResponse>();
     auto request_str = std::make_shared<std::string>();
     auto buffer = std::make_shared<asio::streambuf>();
+    auto timed_out = std::make_shared<bool>(false);
+
+    // Start timeout timer
+    auto timer = start_timeout(io_ctx_, options.timeout, socket, timed_out);
+
+    // Wrap callback to cancel timer and check timeout
+    auto guarded_callback = [timer, timed_out, callback](HttpResponse resp) {
+      timer->cancel();
+      if (*timed_out) {
+        resp.error = "Request timed out";
+        resp.status_code = 0;
+      }
+      callback(std::move(resp));
+    };
 
     // Build HTTP request
     std::ostringstream req;
@@ -101,44 +145,46 @@ class HttpClient::Impl {
     // Resolve and connect
     resolver_.async_resolve(
         url.host, url.port_or_default(),
-        [this, socket, request_str, response, buffer, callback, url](const asio::error_code &ec, asio::ip::tcp::resolver::results_type results) {
+        [this, socket, request_str, response, buffer, guarded_callback, url](const asio::error_code &ec,
+                                                                             asio::ip::tcp::resolver::results_type results) {
           if (ec) {
             response->error = "DNS resolution failed: " + ec.message();
-            callback(*response);
+            guarded_callback(*response);
             return;
           }
 
-          asio::async_connect(socket->lowest_layer(), results,
-                              [this, socket, request_str, response, buffer, callback](const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
-                                if (ec) {
-                                  response->error = "Connection failed: " + ec.message();
-                                  callback(*response);
-                                  return;
-                                }
+          asio::async_connect(
+              socket->lowest_layer(), results,
+              [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
+                if (ec) {
+                  response->error = "Connection failed: " + ec.message();
+                  guarded_callback(*response);
+                  return;
+                }
 
-                                // SSL handshake
-                                socket->async_handshake(asio::ssl::stream_base::client, [this, socket, request_str, response, buffer,
-                                                                                         callback](const asio::error_code &ec) {
-                                  if (ec) {
-                                    response->error = "SSL handshake failed: " + ec.message();
-                                    callback(*response);
-                                    return;
-                                  }
+                // SSL handshake
+                socket->async_handshake(asio::ssl::stream_base::client,
+                                        [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec) {
+                                          if (ec) {
+                                            response->error = "SSL handshake failed: " + ec.message();
+                                            guarded_callback(*response);
+                                            return;
+                                          }
 
-                                  // Send request
-                                  asio::async_write(*socket, asio::buffer(*request_str),
-                                                    [this, socket, response, buffer, callback](const asio::error_code &ec, size_t) {
-                                                      if (ec) {
-                                                        response->error = "Write failed: " + ec.message();
-                                                        callback(*response);
-                                                        return;
-                                                      }
+                                          // Send request
+                                          asio::async_write(*socket, asio::buffer(*request_str),
+                                                            [this, socket, response, buffer, guarded_callback](const asio::error_code &ec, size_t) {
+                                                              if (ec) {
+                                                                response->error = "Write failed: " + ec.message();
+                                                                guarded_callback(*response);
+                                                                return;
+                                                              }
 
-                                                      // Read response
-                                                      read_response(socket, response, buffer, callback);
-                                                    });
-                                });
-                              });
+                                                              // Read response
+                                                              read_response(socket, response, buffer, guarded_callback);
+                                                            });
+                                        });
+              });
         });
   }
 
@@ -147,6 +193,20 @@ class HttpClient::Impl {
     auto response = std::make_shared<HttpResponse>();
     auto request_str = std::make_shared<std::string>();
     auto buffer = std::make_shared<asio::streambuf>();
+    auto timed_out = std::make_shared<bool>(false);
+
+    // Start timeout timer
+    auto timer = start_timeout(io_ctx_, options.timeout, socket, timed_out);
+
+    // Wrap callback to cancel timer and check timeout
+    auto guarded_callback = [timer, timed_out, callback](HttpResponse resp) {
+      timer->cancel();
+      if (*timed_out) {
+        resp.error = "Request timed out";
+        resp.status_code = 0;
+      }
+      callback(std::move(resp));
+    };
 
     // Build HTTP request
     std::ostringstream req;
@@ -168,32 +228,33 @@ class HttpClient::Impl {
 
     resolver_.async_resolve(
         url.host, url.port_or_default(),
-        [this, socket, request_str, response, buffer, callback](const asio::error_code &ec, asio::ip::tcp::resolver::results_type results) {
+        [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec, asio::ip::tcp::resolver::results_type results) {
           if (ec) {
             response->error = "DNS resolution failed: " + ec.message();
-            callback(*response);
+            guarded_callback(*response);
             return;
           }
 
-          asio::async_connect(*socket, results,
-                              [this, socket, request_str, response, buffer, callback](const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
-                                if (ec) {
-                                  response->error = "Connection failed: " + ec.message();
-                                  callback(*response);
-                                  return;
-                                }
+          asio::async_connect(
+              *socket, results,
+              [this, socket, request_str, response, buffer, guarded_callback](const asio::error_code &ec, const asio::ip::tcp::endpoint &) {
+                if (ec) {
+                  response->error = "Connection failed: " + ec.message();
+                  guarded_callback(*response);
+                  return;
+                }
 
-                                asio::async_write(*socket, asio::buffer(*request_str),
-                                                  [this, socket, response, buffer, callback](const asio::error_code &ec, size_t) {
-                                                    if (ec) {
-                                                      response->error = "Write failed: " + ec.message();
-                                                      callback(*response);
-                                                      return;
-                                                    }
+                asio::async_write(*socket, asio::buffer(*request_str),
+                                  [this, socket, response, buffer, guarded_callback](const asio::error_code &ec, size_t) {
+                                    if (ec) {
+                                      response->error = "Write failed: " + ec.message();
+                                      guarded_callback(*response);
+                                      return;
+                                    }
 
-                                                    read_response(socket, response, buffer, callback);
-                                                  });
-                              });
+                                    read_response(socket, response, buffer, guarded_callback);
+                                  });
+              });
         });
   }
 
@@ -308,7 +369,21 @@ class HttpClient::Impl {
     auto buffer = std::make_shared<asio::streambuf>();
     auto status_code = std::make_shared<int>(0);
     auto shared_on_data = std::make_shared<StreamDataCallback>(std::move(on_data));
-    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string &)>>(std::move(on_complete));
+    auto timed_out = std::make_shared<bool>(false);
+
+    // Start timeout timer
+    auto timer = start_timeout(io_ctx_, options.timeout, socket, timed_out);
+
+    // Wrap on_complete to cancel timer and check timeout
+    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string &)>>(
+        [timer, timed_out, on_complete = std::move(on_complete)](int code, const std::string &err) {
+          timer->cancel();
+          if (*timed_out) {
+            on_complete(0, "Request timed out");
+          } else {
+            on_complete(code, err);
+          }
+        });
 
     // Build HTTP request
     std::ostringstream req;
@@ -378,7 +453,21 @@ class HttpClient::Impl {
     auto buffer = std::make_shared<asio::streambuf>();
     auto status_code = std::make_shared<int>(0);
     auto shared_on_data = std::make_shared<StreamDataCallback>(std::move(on_data));
-    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string &)>>(std::move(on_complete));
+    auto timed_out = std::make_shared<bool>(false);
+
+    // Start timeout timer
+    auto timer = start_timeout(io_ctx_, options.timeout, socket, timed_out);
+
+    // Wrap on_complete to cancel timer and check timeout
+    auto shared_on_complete = std::make_shared<std::function<void(int, const std::string &)>>(
+        [timer, timed_out, on_complete = std::move(on_complete)](int code, const std::string &err) {
+          timer->cancel();
+          if (*timed_out) {
+            on_complete(0, "Request timed out");
+          } else {
+            on_complete(code, err);
+          }
+        });
 
     // Build HTTP request
     std::ostringstream req;
@@ -526,14 +615,65 @@ void HttpClient::request(const std::string &url, const HttpOptions &options, std
 }
 
 std::future<HttpResponse> HttpClient::request(const std::string &url, const HttpOptions &options) {
-  auto promise = std::make_shared<std::promise<HttpResponse>>();
-  auto future = promise->get_future();
+  if (options.max_retries <= 0) {
+    // No retry — preserve original behavior
+    auto promise = std::make_shared<std::promise<HttpResponse>>();
+    auto future = promise->get_future();
 
-  impl_->request(url, options, [promise](HttpResponse response) {
-    promise->set_value(std::move(response));
+    impl_->request(url, options, [promise](HttpResponse response) {
+      promise->set_value(std::move(response));
+    });
+
+    return future;
+  }
+
+  // With retry — use std::async to drive the retry loop
+  return std::async(std::launch::async, [this, url, options]() -> HttpResponse {
+    auto is_retryable = [](const HttpResponse &resp) -> bool {
+      // Connection/timeout errors (status_code == 0 means no HTTP response received)
+      if (resp.status_code == 0) return true;
+      // 429 Too Many Requests
+      if (resp.status_code == 429) return true;
+      // 5xx server errors worth retrying
+      if (resp.status_code == 500 || resp.status_code == 502 || resp.status_code == 503 || resp.status_code == 504) return true;
+      return false;
+    };
+
+    HttpResponse last_response;
+    int max_attempts = 1 + options.max_retries;
+
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+      auto promise = std::make_shared<std::promise<HttpResponse>>();
+      auto future = promise->get_future();
+
+      impl_->request(url, options, [promise](HttpResponse response) {
+        promise->set_value(std::move(response));
+      });
+
+      last_response = future.get();
+
+      // Success — return immediately
+      if (last_response.ok()) {
+        return last_response;
+      }
+
+      // Not retryable — return immediately
+      if (!is_retryable(last_response)) {
+        return last_response;
+      }
+
+      // Last attempt — don't sleep, just return
+      if (attempt + 1 >= max_attempts) {
+        break;
+      }
+
+      spdlog::warn("HTTP request to {} failed (status={}, error={}), retrying {}/{}...", url, last_response.status_code, last_response.error,
+                   attempt + 1, options.max_retries);
+      std::this_thread::sleep_for(options.retry_delay);
+    }
+
+    return last_response;
   });
-
-  return future;
 }
 
 void HttpClient::request_stream(const std::string &url, const HttpOptions &options, StreamDataCallback on_data,

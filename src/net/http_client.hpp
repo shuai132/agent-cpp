@@ -2,6 +2,7 @@
 
 #include <asio.hpp>
 #include <asio/ssl.hpp>
+#include <chrono>
 #include <functional>
 #include <future>
 #include <map>
@@ -29,6 +30,8 @@ struct HttpOptions {
   std::map<std::string, std::string> headers;
   std::string body;
   std::chrono::seconds timeout{30};
+  int max_retries = 0;                          // Number of retries (0 = no retry)
+  std::chrono::milliseconds retry_delay{1000};  // Delay between retries
 };
 
 // Streaming data callback

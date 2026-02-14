@@ -74,6 +74,37 @@ Config Config::load(const fs::path &path) {
       }
     }
 
+    // Load agents
+    if (j.contains("agents")) {
+      for (auto &[id, agent_json] : j["agents"].items()) {
+        AgentConfig agent;
+        agent.id = id;
+        agent.type = agent_type_from_string(agent_json.value("type", "build"));
+        agent.model = agent_json.value("model", "");
+        agent.system_prompt = agent_json.value("system_prompt", "");
+        agent.max_tokens = agent_json.value("max_tokens", 100000);
+        agent.default_permission = permission_from_string(agent_json.value("default_permission", "ask"));
+
+        if (agent_json.contains("allowed_tools")) {
+          for (const auto &tool : agent_json["allowed_tools"]) {
+            agent.allowed_tools.push_back(tool);
+          }
+        }
+        if (agent_json.contains("denied_tools")) {
+          for (const auto &tool : agent_json["denied_tools"]) {
+            agent.denied_tools.push_back(tool);
+          }
+        }
+        if (agent_json.contains("permissions")) {
+          for (auto &[tool_id, perm_str] : agent_json["permissions"].items()) {
+            agent.permissions[tool_id] = permission_from_string(perm_str);
+          }
+        }
+
+        config.agents[id] = agent;
+      }
+    }
+
     // Load context settings
     if (j.contains("context")) {
       const auto &ctx = j["context"];
@@ -160,6 +191,30 @@ void Config::save(const fs::path &path) const {
     servers_json.push_back(s);
   }
   j["mcp_servers"] = servers_json;
+
+  // Save agents
+  json agents_json;
+  for (const auto &[id, agent] : agents) {
+    json a;
+    a["type"] = to_string(agent.type);
+    a["model"] = agent.model;
+    a["system_prompt"] = agent.system_prompt;
+    a["max_tokens"] = agent.max_tokens;
+    a["default_permission"] = to_string(agent.default_permission);
+    a["allowed_tools"] = agent.allowed_tools;
+    a["denied_tools"] = agent.denied_tools;
+
+    if (!agent.permissions.empty()) {
+      json perms;
+      for (const auto &[tool_id, perm] : agent.permissions) {
+        perms[tool_id] = to_string(perm);
+      }
+      a["permissions"] = perms;
+    }
+
+    agents_json[id] = a;
+  }
+  j["agents"] = agents_json;
 
   // Save context settings
   j["context"] = {{"prune_protect_tokens", context.prune_protect_tokens},

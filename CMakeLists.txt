@@ -158,6 +158,13 @@ if (AGENT_BUILD_TESTS)
             tests/test_llm.cpp
             tests/test_json_store.cpp
             tests/test_skill.cpp
+            tests/test_bus.cpp
+            tests/test_types.cpp
+            tests/test_config.cpp
+            tests/test_mcp.cpp
+            tests/test_permission.cpp
+            tests/test_builtin_tools.cpp
+            tests/test_net.cpp
     )
 
     target_link_libraries(agent_tests PRIVATE

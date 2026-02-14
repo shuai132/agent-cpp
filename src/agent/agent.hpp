@@ -23,6 +23,9 @@
 // Skill system
 #include "skill/skill.hpp"
 
+// MCP client
+#include "mcp/client.hpp"
+
 // Session management
 #include "session/session.hpp"
 

@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include "llm/anthropic.hpp"
+#include "mcp/client.hpp"
 #include "skill/skill.hpp"
 #include "tool/builtin/builtins.hpp"
 
@@ -27,10 +28,18 @@ void init() {
   auto cwd = std::filesystem::current_path();
   auto config = Config::load_default();
   skill::SkillRegistry::instance().discover(cwd, config.skill_paths);
+
+  // Initialize MCP servers from config
+  if (!config.mcp_servers.empty()) {
+    auto &mcp_mgr = mcp::McpManager::instance();
+    mcp_mgr.initialize(config.mcp_servers);
+    mcp_mgr.connect_all();
+    mcp_mgr.register_tools();
+  }
 }
 
 void shutdown() {
-  // Cleanup if needed
+  mcp::McpManager::instance().disconnect_all();
 }
 
 std::string version() {

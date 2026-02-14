@@ -27,6 +27,25 @@ FinishReason finish_reason_from_string(const std::string &str) {
   return FinishReason::Stop;
 }
 
+std::string to_string(Permission perm) {
+  switch (perm) {
+    case Permission::Allow:
+      return "allow";
+    case Permission::Deny:
+      return "deny";
+    case Permission::Ask:
+      return "ask";
+  }
+  return "ask";
+}
+
+Permission permission_from_string(const std::string &str) {
+  if (str == "allow") return Permission::Allow;
+  if (str == "deny") return Permission::Deny;
+  if (str == "ask") return Permission::Ask;
+  return Permission::Ask;
+}
+
 std::string to_string(AgentType type) {
   switch (type) {
     case AgentType::Build:

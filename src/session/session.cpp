@@ -8,6 +8,7 @@
 
 #include "bus/bus.hpp"
 #include "llm/anthropic.hpp"
+#include "tool/permission.hpp"
 
 namespace agent {
 
@@ -449,6 +450,35 @@ void Session::execute_tool_calls() {
       result_msg.add_tool_result(tc->id, tc->name, "Tool not found: " + tc->name, true);
       tc->completed = true;
       continue;
+    }
+
+    // Check permission
+    auto perm = PermissionManager::instance().check_permission(tc->name, agent_config_);
+    if (perm == Permission::Deny) {
+      spdlog::info("Permission denied for tool: {}", tc->name);
+      result_msg.add_tool_result(tc->id, tc->name, "Permission denied: tool '" + tc->name + "' is not allowed", true);
+      tc->completed = true;
+      continue;
+    }
+    if (perm == Permission::Ask) {
+      bool allowed = true;  // Default allow for non-interactive mode
+      if (permission_handler_) {
+        try {
+          auto future = permission_handler_(tc->name, "Tool '" + tc->name + "' requires permission to execute");
+          allowed = future.get();
+        } catch (const std::exception &e) {
+          spdlog::warn("Permission handler error for tool {}: {}", tc->name, e.what());
+          allowed = false;
+        }
+      }
+      if (!allowed) {
+        spdlog::info("User denied permission for tool: {}", tc->name);
+        PermissionManager::instance().deny(tc->name);
+        result_msg.add_tool_result(tc->id, tc->name, "Permission denied: tool '" + tc->name + "' is not allowed", true);
+        tc->completed = true;
+        continue;
+      }
+      PermissionManager::instance().grant(tc->name);
     }
 
     // Build context

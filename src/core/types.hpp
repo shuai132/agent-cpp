@@ -93,6 +93,10 @@ enum class Permission {
   Ask  // Prompt user
 };
 
+std::string to_string(Permission perm);
+
+Permission permission_from_string(const std::string &str);
+
 // Agent types
 enum class AgentType {
   Build,      // Main coding agent
