@@ -5,15 +5,28 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Options
-option(AGENT_BUILD_TESTS "Build tests" ON)
-option(AGENT_BUILD_EXAMPLES "Build examples" ON)
+# Project name without hyphens for target names
+set(AGENT_SDK_NAME agent_sdk)
+set(AGENT_CLI_NAME agent_cli)
+
+# Options (only enabled by default when this is the top-level project)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    option(AGENT_BUILD_TESTS "Build tests" ON)
+    option(AGENT_BUILD_EXAMPLES "Build examples" ON)
+    option(AGENT_BUILD_CLI "Build agent_cli TUI application" ON)
+else ()
+    option(AGENT_BUILD_TESTS "Build tests" OFF)
+    option(AGENT_BUILD_EXAMPLES "Build examples" OFF)
+    option(AGENT_BUILD_CLI "Build agent_cli TUI application" OFF)
+endif ()
 
 # Dependencies
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
 # nlohmann/json
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
         json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -39,6 +52,9 @@ target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
 target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
 
 # spdlog for logging
+set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -65,7 +81,7 @@ FetchContent_MakeAvailable(ftxui)
 find_package(OpenSSL REQUIRED)
 
 # Main library
-add_library(agent_sdk
+add_library(${AGENT_SDK_NAME}
         # Core types
         src/core/types.cpp
         src/core/message.cpp
@@ -117,11 +133,11 @@ add_library(agent_sdk
         src/tool/builtin/skill.cpp
 )
 
-target_include_directories(agent_sdk PUBLIC
+target_include_directories(${AGENT_SDK_NAME} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(agent_sdk PUBLIC
+target_link_libraries(${AGENT_SDK_NAME} PUBLIC
         nlohmann_json::nlohmann_json
         asio
         spdlog::spdlog
@@ -131,32 +147,45 @@ target_link_libraries(agent_sdk PUBLIC
 
 # Platform-specific settings
 if (APPLE)
-    target_link_libraries(agent_sdk PUBLIC "-framework CoreFoundation" "-framework Security")
+    target_link_libraries(${AGENT_SDK_NAME} PUBLIC "-framework CoreFoundation" "-framework Security")
 endif ()
 
 if (UNIX AND NOT APPLE)
-    target_link_libraries(agent_sdk PUBLIC pthread)
+    target_link_libraries(${AGENT_SDK_NAME} PUBLIC pthread)
 endif ()
 
 # Examples
 if (AGENT_BUILD_EXAMPLES)
-    add_executable(simple_chat examples/simple_chat.cpp)
-    target_link_libraries(simple_chat PRIVATE agent_sdk)
+    add_executable(${AGENT_SDK_NAME}_simple_chat examples/simple_chat.cpp)
+    target_link_libraries(${AGENT_SDK_NAME}_simple_chat PRIVATE ${AGENT_SDK_NAME})
 
-    add_executable(api-test examples/api_test.cpp)
-    target_link_libraries(api-test PRIVATE agent_sdk)
+    add_executable(${AGENT_SDK_NAME}_api_test examples/api_test.cpp)
+    target_link_libraries(${AGENT_SDK_NAME}_api_test PRIVATE ${AGENT_SDK_NAME})
 
-    add_executable(tool-test examples/tool_test.cpp)
-    target_link_libraries(tool-test PRIVATE agent_sdk)
+    add_executable(${AGENT_SDK_NAME}_tool_test examples/tool_test.cpp)
+    target_link_libraries(${AGENT_SDK_NAME}_tool_test PRIVATE ${AGENT_SDK_NAME})
+endif ()
 
-    add_executable(agent_cli examples/agent_cli.cpp)
-    target_link_libraries(agent_cli PRIVATE agent_sdk ftxui::component)
+# CLI TUI application
+if (AGENT_BUILD_CLI)
+    add_executable(${AGENT_CLI_NAME}
+            tui/agent_cli.cpp
+            tui/tui_components.cpp
+            tui/tui_state.cpp
+            tui/tui_callbacks.cpp
+            tui/tui_render.cpp
+            tui/tui_event_handler.cpp
+    )
+    target_include_directories(${AGENT_CLI_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tui)
+    target_link_libraries(${AGENT_CLI_NAME} PRIVATE ${AGENT_SDK_NAME} ftxui::component)
 endif ()
 
 # Tests
 if (AGENT_BUILD_TESTS)
     enable_testing()
 
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
             googletest
             GIT_REPOSITORY https://github.com/google/googletest.git
@@ -166,7 +195,7 @@ if (AGENT_BUILD_TESTS)
     )
     FetchContent_MakeAvailable(googletest)
 
-    add_executable(agent_tests
+    add_executable(${AGENT_SDK_NAME}_tests
             tests/test_main.cpp
             tests/test_message.cpp
             tests/test_tool.cpp
@@ -182,13 +211,16 @@ if (AGENT_BUILD_TESTS)
             tests/test_builtin_tools.cpp
             tests/test_net.cpp
             tests/test_agent_cli.cpp
+            # TUI components for CLI tests
+            tui/tui_components.cpp
     )
 
-    target_link_libraries(agent_tests PRIVATE
-            agent_sdk
+    target_include_directories(${AGENT_SDK_NAME}_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tui)
+    target_link_libraries(${AGENT_SDK_NAME}_tests PRIVATE
+            ${AGENT_SDK_NAME}
             GTest::gtest
     )
 
     include(GoogleTest)
-    gtest_discover_tests(agent_tests)
+    gtest_discover_tests(${AGENT_SDK_NAME}_tests)
 endif ()

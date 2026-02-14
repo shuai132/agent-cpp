@@ -1,0 +1,174 @@
+#pragma once
+
+// tui_components.h — agent_cli 的可测试核心组件
+// ChatLog、ToolPanel、命令解析等逻辑
+// 独立于 FTXUI 渲染层，可以单独进行单元测试
+
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace agent_cli {
+
+// ============================================================
+// 聊天消息条目
+// ============================================================
+
+enum class EntryKind {
+  UserMsg,
+  AssistantText,
+  ToolCall,
+  ToolResult,
+  SubtaskStart,
+  SubtaskEnd,
+  Error,
+  SystemInfo,
+};
+
+std::string to_string(EntryKind kind);
+
+struct ChatEntry {
+  EntryKind kind;
+  std::string text;
+  std::string detail;  // 可选的额外信息 (args, result 等)
+};
+
+// ============================================================
+// 线程安全的聊天日志
+// ============================================================
+
+class ChatLog {
+ public:
+  void push(ChatEntry entry);
+  void append_stream(const std::string& delta);
+  std::vector<ChatEntry> snapshot() const;
+  size_t size() const;
+  void clear();
+  ChatEntry last() const;
+  std::vector<ChatEntry> filter(EntryKind kind) const;
+
+ private:
+  mutable std::mutex mu_;
+  std::vector<ChatEntry> entries_;
+};
+
+// ============================================================
+// 工具活动记录
+// ============================================================
+
+struct ToolActivity {
+  std::string tool_name;
+  std::string status;  // "running", "done", "error"
+  std::string summary;
+};
+
+class ToolPanel {
+ public:
+  void start_tool(const std::string& name, const std::string& args_summary);
+  void finish_tool(const std::string& name, const std::string& result_summary, bool is_error);
+  std::vector<ToolActivity> snapshot() const;
+  size_t size() const;
+  std::string tool_status(const std::string& name) const;
+  void clear();
+
+ private:
+  mutable std::mutex mu_;
+  std::vector<ToolActivity> activities_;
+};
+
+// ============================================================
+// 命令解析
+// ============================================================
+
+enum class CommandType {
+  None,      // 不是命令，是普通消息
+  Quit,      // /q, /quit
+  Clear,     // /clear
+  Help,      // /h, /help
+  Sessions,  // /s, /sessions
+  Compact,   // /compact
+  Expand,    // /expand — 展开所有工具调用
+  Collapse,  // /collapse — 折叠所有工具调用
+  Unknown,   // 无法识别的 / 命令
+};
+
+struct CommandDef {
+  std::string name;
+  std::string shortcut;
+  std::string description;
+  CommandType type;
+};
+
+const std::vector<CommandDef>& command_defs();
+std::vector<CommandDef> match_commands(const std::string& prefix);
+
+struct ParsedCommand {
+  CommandType type = CommandType::None;
+  std::string arg;
+};
+
+ParsedCommand parse_command(const std::string& input);
+
+// ============================================================
+// 文本工具函数
+// ============================================================
+
+std::string truncate_text(const std::string& s, size_t max_len);
+std::vector<std::string> split_lines(const std::string& text);
+std::string format_time(const std::chrono::system_clock::time_point& ts);
+std::string format_tokens(int64_t tokens);
+
+// ============================================================
+// Agent 模式
+// ============================================================
+
+enum class AgentMode {
+  Build,
+  Plan,
+};
+
+std::string to_string(AgentMode mode);
+
+// ============================================================
+// Agent 状态管理
+// ============================================================
+
+class AgentState {
+ public:
+  void set_running(bool running);
+  bool is_running() const;
+
+  void set_model(const std::string& model);
+  std::string model() const;
+
+  void set_session_id(const std::string& id);
+  std::string session_id() const;
+
+  void update_tokens(int64_t input, int64_t output);
+  int64_t input_tokens() const;
+  int64_t output_tokens() const;
+
+  void set_activity(const std::string& msg);
+  std::string activity() const;
+
+  void set_mode(AgentMode mode);
+  AgentMode mode() const;
+  void toggle_mode();
+
+  std::string status_text() const;
+
+ private:
+  std::atomic<bool> running_{false};
+  std::atomic<int64_t> input_tokens_{0};
+  std::atomic<int64_t> output_tokens_{0};
+  std::atomic<int> mode_{static_cast<int>(AgentMode::Build)};
+  mutable std::mutex mu_;
+  std::string model_;
+  std::string session_id_;
+  std::string activity_;
+};
+
+}  // namespace agent_cli

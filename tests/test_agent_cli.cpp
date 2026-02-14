@@ -8,7 +8,7 @@
 #include "agent/agent.hpp"
 
 // 测试核心组件（不依赖 FTXUI）
-#include "../examples/tui_components.hpp"
+#include "../tui/tui_components.h"
 
 using namespace agent_cli;
 

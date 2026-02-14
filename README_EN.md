@@ -4,7 +4,7 @@ agent sdk for cpp, like claude code sdk but lightweight.
 
 [中文](README.md) | English
 
-## Why Reimplement in C++?
+## Why Implement in C++?
 
 Existing AI Agent projects (Claude Code, OpenCode, OpenClaw, etc.) share two common issues:
 
@@ -16,6 +16,12 @@ Existing AI Agent projects (Claude Code, OpenCode, OpenClaw, etc.) share two com
 agent-sdk chooses C++ precisely to address these pain points: the build output is a lightweight native static library
 with zero runtime dependencies, easily embeddable into any C/C++ project, and even capable of running in embedded
 environments.
+
+| Binary (macOS)   | Size     |
+|------------------|----------|
+| claude v2.1.39   | 174M     |
+| opencode v1.1.65 | 101M     |
+| **agent-sdk**    | **1~3M** |
 
 ## Goals
 

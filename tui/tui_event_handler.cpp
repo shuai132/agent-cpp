@@ -1,0 +1,417 @@
+#include "tui_event_handler.h"
+
+#include <algorithm>
+#include <chrono>
+#include <string>
+#include <thread>
+
+#include <ftxui/component/component.hpp>
+
+#include "agent/agent.hpp"
+#include "tui_callbacks.h"
+#include "tui_components.h"
+#include "tui_state.h"
+
+namespace agent_cli {
+
+using namespace ftxui;
+
+// ============================================================
+// 命令提交处理
+// ============================================================
+
+void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) {
+  // 命令菜单补全
+  if (state.show_cmd_menu) {
+    auto matches = match_commands(state.input_text);
+    if (!matches.empty() && state.cmd_menu_selected < static_cast<int>(matches.size())) {
+      state.input_text = matches[state.cmd_menu_selected].name;
+      state.input_cursor_pos = static_cast<int>(state.input_text.size());
+      state.show_cmd_menu = false;
+      return;
+    }
+  }
+
+  if (state.input_text.empty()) return;
+  state.show_cmd_menu = false;
+
+  auto cmd = parse_command(state.input_text);
+  switch (cmd.type) {
+    case CommandType::Quit:
+      screen.Exit();
+      return;
+
+    case CommandType::Clear:
+      state.clear_all();
+      state.input_text.clear();
+      return;
+
+    case CommandType::Help: {
+      std::string h;
+      h += "Commands:\n\n";
+      for (const auto& def : command_defs()) {
+        std::string cmd_col = def.name;
+        if (!def.shortcut.empty()) cmd_col += " (" + def.shortcut + ")";
+        while (cmd_col.size() < 24) cmd_col += ' ';
+        h += "  " + cmd_col + def.description + "\n";
+      }
+      h += "\nKeybindings:\n\n";
+      h += "  Esc                   Interrupt running agent\n";
+      h += "  Ctrl+C                Press twice to exit\n";
+      h += "  Tab                   Switch build/plan mode\n";
+      h += "  PageUp / PageDown     Scroll chat history\n";
+      state.chat_log.push({EntryKind::SystemInfo, h, ""});
+      state.input_text.clear();
+      return;
+    }
+
+    case CommandType::Compact:
+      state.chat_log.push({EntryKind::SystemInfo, "Context compaction triggered", ""});
+      state.input_text.clear();
+      return;
+
+    case CommandType::Expand:
+      for (auto& [k, v] : state.tool_expanded) v = true;
+      for (size_t i = 0; i < state.chat_log.size(); ++i) state.tool_expanded[i] = true;
+      state.chat_log.push({EntryKind::SystemInfo, "All tool calls expanded", ""});
+      state.input_text.clear();
+      return;
+
+    case CommandType::Collapse:
+      for (auto& [k, v] : state.tool_expanded) v = false;
+      for (size_t i = 0; i < state.chat_log.size(); ++i) state.tool_expanded[i] = false;
+      state.chat_log.push({EntryKind::SystemInfo, "All tool calls collapsed", ""});
+      state.input_text.clear();
+      return;
+
+    case CommandType::Sessions:
+      handle_sessions_command(state, ctx, cmd.arg);
+      state.input_text.clear();
+      return;
+
+    case CommandType::Unknown:
+      state.chat_log.push({EntryKind::Error, "Unknown command: " + cmd.arg, ""});
+      state.input_text.clear();
+      return;
+
+    default:
+      break;
+  }
+
+  // 普通消息
+  std::string user_msg = state.input_text;
+  state.input_text.clear();
+
+  if (state.agent_state.is_running()) {
+    state.chat_log.push({EntryKind::SystemInfo, "Agent is busy, please wait...", ""});
+    return;
+  }
+
+  state.chat_log.push({EntryKind::UserMsg, user_msg, ""});
+  state.agent_state.set_running(true);
+  state.auto_scroll = true;
+  state.scroll_y = 1.0f;
+
+  auto& session = ctx.session;
+  auto refresh_fn = ctx.refresh_fn;
+  std::thread([&session, &state, user_msg, refresh_fn]() {
+    session->prompt(user_msg);
+    auto usage = session->total_usage();
+    state.agent_state.update_tokens(usage.input_tokens, usage.output_tokens);
+    state.agent_state.set_running(false);
+    refresh_fn();
+  }).detach();
+}
+
+// ============================================================
+// 会话命令处理
+// ============================================================
+
+void handle_sessions_command(AppState& state, AppContext& ctx, const std::string& arg) {
+  auto sessions_list = ctx.store->list_sessions();
+
+  if (arg.empty()) {
+    // 打开会话列表面板
+    state.sessions_cache = sessions_list;
+    state.sessions_selected = 0;
+    for (size_t si = 0; si < state.sessions_cache.size(); ++si) {
+      if (state.sessions_cache[si].id == state.agent_state.session_id()) {
+        state.sessions_selected = static_cast<int>(si);
+        break;
+      }
+    }
+    state.show_sessions_panel = true;
+  } else if (arg == "d" || arg.substr(0, 2) == "d ") {
+    // 删除会话
+    std::string d_arg = (arg.size() > 2) ? arg.substr(2) : "";
+    if (d_arg.empty() || !std::all_of(d_arg.begin(), d_arg.end(), ::isdigit)) {
+      state.chat_log.push({EntryKind::Error, "Usage: /s d <N>", ""});
+    } else {
+      int d_idx = std::stoi(d_arg);
+      if (d_idx < 1 || d_idx > static_cast<int>(sessions_list.size())) {
+        state.chat_log.push({EntryKind::Error, "Invalid session number: " + d_arg, ""});
+      } else {
+        const auto& meta = sessions_list[d_idx - 1];
+        bool was_current = (meta.id == state.agent_state.session_id());
+        ctx.store->remove_session(meta.id);
+        state.chat_log.push({EntryKind::SystemInfo, "Deleted session: " + (meta.title.empty() ? "(untitled)" : meta.title), ""});
+        if (was_current) {
+          ctx.session = agent::Session::create(ctx.io_ctx, ctx.config, agent::AgentType::Build, ctx.store);
+          state.agent_state.set_session_id(ctx.session->id());
+          setup_tui_callbacks(state, ctx);
+          state.chat_log.push({EntryKind::SystemInfo, "Created new session", ""});
+        }
+      }
+    }
+  } else if (std::all_of(arg.begin(), arg.end(), ::isdigit)) {
+    // 加载会话
+    int s_idx = std::stoi(arg);
+    if (s_idx < 1 || s_idx > static_cast<int>(sessions_list.size())) {
+      state.chat_log.push({EntryKind::Error, "Invalid session number: " + arg, ""});
+    } else {
+      const auto& meta = sessions_list[s_idx - 1];
+      ctx.session->cancel();
+      auto resumed = agent::Session::resume(ctx.io_ctx, ctx.config, meta.id, ctx.store);
+      if (resumed) {
+        ctx.session = resumed;
+        state.agent_state.set_session_id(ctx.session->id());
+        setup_tui_callbacks(state, ctx);
+        auto usage = ctx.session->total_usage();
+        state.agent_state.update_tokens(usage.input_tokens, usage.output_tokens);
+        state.clear_all();
+        std::string title = meta.title.empty() ? "(untitled)" : meta.title;
+        state.chat_log.push({EntryKind::SystemInfo, "Loaded session: " + title, ""});
+        load_history_to_chat_log(state, ctx.session);
+      } else {
+        state.chat_log.push({EntryKind::Error, "Failed to load session", ""});
+      }
+    }
+  } else {
+    state.chat_log.push({EntryKind::Error, "Unknown sessions subcommand: " + arg, ""});
+  }
+}
+
+// ============================================================
+// 会话面板事件处理
+// ============================================================
+
+bool handle_sessions_panel_event(AppState& state, AppContext& ctx, Event event) {
+  int count = static_cast<int>(state.sessions_cache.size());
+
+  if (event == Event::Escape || event == Event::Character('q')) {
+    state.show_sessions_panel = false;
+    return true;
+  }
+  if (event == Event::ArrowUp || event == Event::Character('k')) {
+    if (count > 0) state.sessions_selected = (state.sessions_selected - 1 + count) % count;
+    return true;
+  }
+  if (event == Event::ArrowDown || event == Event::Character('j')) {
+    if (count > 0) state.sessions_selected = (state.sessions_selected + 1) % count;
+    return true;
+  }
+
+  if (event.is_mouse()) {
+    auto& mouse = event.mouse();
+    if (mouse.button == Mouse::WheelUp) {
+      if (count > 0) state.sessions_selected = (state.sessions_selected - 1 + count) % count;
+      return true;
+    }
+    if (mouse.button == Mouse::WheelDown) {
+      if (count > 0) state.sessions_selected = (state.sessions_selected + 1) % count;
+      return true;
+    }
+    if (mouse.button == Mouse::Left && mouse.motion == Mouse::Pressed && count > 0) {
+      for (int bi = 0; bi < static_cast<int>(state.session_item_boxes.size()); ++bi) {
+        if (state.session_item_boxes[bi].Contain(mouse.x, mouse.y)) {
+          state.sessions_selected = bi;
+          break;
+        }
+      }
+      return true;
+    }
+    return true;
+  }
+
+  if (event == Event::Return) {
+    if (count > 0 && state.sessions_selected < count) {
+      const auto& meta = state.sessions_cache[state.sessions_selected];
+      ctx.session->cancel();
+      auto resumed = agent::Session::resume(ctx.io_ctx, ctx.config, meta.id, ctx.store);
+      if (resumed) {
+        ctx.session = resumed;
+        state.agent_state.set_session_id(ctx.session->id());
+        setup_tui_callbacks(state, ctx);
+        auto usage = ctx.session->total_usage();
+        state.agent_state.update_tokens(usage.input_tokens, usage.output_tokens);
+        state.clear_all();
+        std::string title = meta.title.empty() ? "(untitled)" : meta.title;
+        state.chat_log.push({EntryKind::SystemInfo, "Loaded session: " + title, ""});
+        load_history_to_chat_log(state, ctx.session);
+      } else {
+        state.chat_log.push({EntryKind::Error, "Failed to load session", ""});
+      }
+      state.show_sessions_panel = false;
+    }
+    return true;
+  }
+
+  if (event == Event::Character('d')) {
+    if (count > 0 && state.sessions_selected < count) {
+      const auto& meta = state.sessions_cache[state.sessions_selected];
+      bool was_current = (meta.id == state.agent_state.session_id());
+      ctx.store->remove_session(meta.id);
+      state.chat_log.push({EntryKind::SystemInfo, "Deleted session: " + (meta.title.empty() ? "(untitled)" : meta.title), ""});
+      if (was_current) {
+        ctx.session = agent::Session::create(ctx.io_ctx, ctx.config, agent::AgentType::Build, ctx.store);
+        state.agent_state.set_session_id(ctx.session->id());
+        setup_tui_callbacks(state, ctx);
+        state.chat_log.push({EntryKind::SystemInfo, "Created new session", ""});
+      }
+      state.sessions_cache = ctx.store->list_sessions();
+      if (state.sessions_selected >= static_cast<int>(state.sessions_cache.size())) {
+        state.sessions_selected = std::max(0, static_cast<int>(state.sessions_cache.size()) - 1);
+      }
+      if (state.sessions_cache.empty()) state.show_sessions_panel = false;
+    }
+    return true;
+  }
+
+  if (event == Event::Character('n')) {
+    ctx.session = agent::Session::create(ctx.io_ctx, ctx.config, agent::AgentType::Build, ctx.store);
+    state.agent_state.set_session_id(ctx.session->id());
+    setup_tui_callbacks(state, ctx);
+    state.agent_state.update_tokens(0, 0);
+    state.clear_all();
+    state.chat_log.push({EntryKind::SystemInfo, "New session created", ""});
+    state.show_sessions_panel = false;
+    return true;
+  }
+
+  return true;  // 拦截所有其他按键
+}
+
+// ============================================================
+// 主事件处理
+// ============================================================
+
+bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& screen, Event event) {
+  // 会话列表面板专属事件
+  if (state.show_sessions_panel) {
+    return handle_sessions_panel_event(state, ctx, event);
+  }
+
+  // 非 Ctrl+C 重置
+  if (event != Event::Special("\x03")) {
+    state.ctrl_c_pending = false;
+  }
+
+  // Esc: 终止当前任务或关闭菜单
+  if (event == Event::Escape) {
+    if (state.agent_state.is_running()) {
+      ctx.session->cancel();
+      state.agent_state.set_running(false);
+      state.chat_log.push({EntryKind::SystemInfo, "Interrupted", ""});
+      return true;
+    }
+    if (state.show_cmd_menu) {
+      state.show_cmd_menu = false;
+      return true;
+    }
+    return true;
+  }
+
+  // Ctrl+C: 两次退出
+  if (event == Event::Special("\x03")) {
+    if (state.agent_state.is_running()) {
+      ctx.session->cancel();
+      state.agent_state.set_running(false);
+      state.chat_log.push({EntryKind::SystemInfo, "Interrupted", ""});
+      state.ctrl_c_pending = false;
+      return true;
+    }
+    auto now = std::chrono::steady_clock::now();
+    if (state.ctrl_c_pending && (now - state.ctrl_c_time) < std::chrono::seconds(2)) {
+      screen.Exit();
+      return true;
+    }
+    state.ctrl_c_pending = true;
+    state.ctrl_c_time = now;
+    state.chat_log.push({EntryKind::SystemInfo, "Press Ctrl+C again to exit", ""});
+    return true;
+  }
+
+  // Enter
+  if (event == Event::Return) {
+    handle_submit(state, ctx, screen);
+    return true;
+  }
+
+  // 命令菜单导航
+  if (state.show_cmd_menu) {
+    auto matches = match_commands(state.input_text);
+    int count = static_cast<int>(matches.size());
+    if (count > 0) {
+      if (event == Event::ArrowUp) {
+        state.cmd_menu_selected = (state.cmd_menu_selected - 1 + count) % count;
+        return true;
+      }
+      if (event == Event::ArrowDown) {
+        state.cmd_menu_selected = (state.cmd_menu_selected + 1) % count;
+        return true;
+      }
+      if (event == Event::Tab) {
+        if (state.cmd_menu_selected < count) {
+          state.input_text = matches[state.cmd_menu_selected].name;
+          state.input_cursor_pos = static_cast<int>(state.input_text.size());
+          state.show_cmd_menu = false;
+        }
+        return true;
+      }
+    }
+  }
+
+  // Tab: 切换模式
+  if (event == Event::Tab && !state.show_cmd_menu) {
+    state.agent_state.toggle_mode();
+    return true;
+  }
+
+  // PageUp / PageDown
+  if (event == Event::PageUp) {
+    state.scroll_y = std::max(0.0f, state.scroll_y - 0.3f);
+    state.auto_scroll = false;
+    return true;
+  }
+  if (event == Event::PageDown) {
+    state.scroll_y = std::min(1.0f, state.scroll_y + 0.3f);
+    if (state.scroll_y >= 0.95f) {
+      state.scroll_y = 1.0f;
+      state.auto_scroll = true;
+    }
+    return true;
+  }
+
+  // 鼠标滚轮
+  if (event.is_mouse()) {
+    auto& mouse = event.mouse();
+    if (mouse.button == Mouse::WheelUp) {
+      state.scroll_y = std::max(0.0f, state.scroll_y - 0.05f);
+      state.auto_scroll = false;
+      return true;
+    }
+    if (mouse.button == Mouse::WheelDown) {
+      state.scroll_y = std::min(1.0f, state.scroll_y + 0.05f);
+      if (state.scroll_y >= 0.95f) {
+        state.scroll_y = 1.0f;
+        state.auto_scroll = true;
+      }
+      return true;
+    }
+    return true;  // 拦截所有鼠标事件
+  }
+
+  return false;
+}
+
+}  // namespace agent_cli

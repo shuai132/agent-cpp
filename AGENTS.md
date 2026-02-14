@@ -57,17 +57,18 @@ find src tests examples -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i
 
 ```
 src/
-  core/       # 基础类型、Message、Config、UUID
+  core/       # 基础类型、Message、Config、UUID、JsonStore、Version
   bus/        # 类型安全的事件总线
   net/        # HTTP / SSE 客户端（Asio + OpenSSL，PIMPL 模式）
   llm/        # LLM 提供商（Anthropic、OpenAI）
-  tool/       # 工具注册表、权限系统、8 个内置工具
-  session/    # 会话管理、Agent Loop、上下文压缩与截断
+  tool/       # 工具注册表、权限系统、9 个内置工具
+  session/    # 会话管理、Agent Loop、上下文压缩与截断、Prompt 处理
   agent/      # Agent 框架入口
-  mcp/        # MCP 客户端（开发中）
-  skill/      # 技能系统（开发中）
+  mcp/        # MCP 客户端（已实现 Transport 和 Client）
+  skill/      # 技能系统（已实现基础功能）
 examples/     # simple_chat、api_test、tool_test
-tests/        # GoogleTest 单元测试
+tests/        # GoogleTest 单元测试（15 个测试文件）
+tui/          # agent_cli TUI 应用（基于 FTXUI）
 ```
 
 ## 代码风格指南
