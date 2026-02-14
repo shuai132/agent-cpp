@@ -201,6 +201,13 @@ export OPENAI_API_KEY="your-api-key"
 export OPENAI_BASE_URL="https://api.openai.com"  # 可选，也可配置为兼容 OpenAI API 的服务地址
 export OPENAI_MODEL="gpt-4o"
 
+# 或使用 Qwen Portal（OAuth 认证，无需 API Key）
+export OPENAI_API_KEY="qwen-oauth"
+export OPENAI_BASE_URL="https://portal.qwen.ai"
+export OPENAI_MODEL="qwen-coder-plus-latest"
+# 首次使用会自动打开浏览器进行登录认证
+# 也可预先使用 qwen cli 登录：qwen auth login
+
 # 运行
 ./build/agent
 ```

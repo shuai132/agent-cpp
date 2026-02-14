@@ -96,6 +96,9 @@ add_library(${AGENT_SDK_NAME}
         src/mcp/client.cpp
         src/mcp/transport.cpp
 
+        # Auth
+        src/auth/qwen_oauth.cpp
+
         # Skill system
         src/skill/skill.cpp
         src/tool/builtin/skill.cpp
@@ -132,6 +135,9 @@ if (AGENT_BUILD_EXAMPLES)
 
     add_executable(${AGENT_SDK_NAME}_tool_test examples/tool_test.cpp)
     target_link_libraries(${AGENT_SDK_NAME}_tool_test PRIVATE ${AGENT_SDK_NAME})
+
+    add_executable(${AGENT_SDK_NAME}_qwen_oauth_test examples/qwen_oauth_test.cpp)
+    target_link_libraries(${AGENT_SDK_NAME}_qwen_oauth_test PRIVATE ${AGENT_SDK_NAME})
 endif ()
 
 # CLI TUI application

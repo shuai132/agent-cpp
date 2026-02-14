@@ -43,11 +43,17 @@ int main(int argc, char* argv[]) {
   if (openai_key) {
     const char* base_url = std::getenv("OPENAI_BASE_URL");
     const char* model = std::getenv("OPENAI_MODEL");
-    config.providers["openai"] = ProviderConfig{"openai", openai_key, base_url ? base_url : "https://api.openai.com", std::nullopt, {}};
+
+    // Qwen OAuth 模式：使用 portal.qwen.ai 端点和 coder-model
+    bool is_qwen_oauth = std::string(openai_key) == "qwen-oauth";
+    std::string default_base_url = is_qwen_oauth ? "https://portal.qwen.ai" : "https://api.openai.com";
+    std::string default_model = is_qwen_oauth ? "coder-model" : "gpt-4o";
+
+    config.providers["openai"] = ProviderConfig{"openai", openai_key, base_url ? base_url : default_base_url, std::nullopt, {}};
     if (model) {
       config.default_model = model;
     } else if (!anthropic_key) {
-      config.default_model = "gpt-4o";
+      config.default_model = default_model;
     }
   }
 

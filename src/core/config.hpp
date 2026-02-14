@@ -35,7 +35,7 @@ struct AgentConfig {
 // MCP server configuration
 struct McpServerConfig {
   std::string name;
-  std::string type;  // "local" or "remote"
+  std::string type;  // "local", "remote", or "qwen-portal"
 
   // For local (stdio) servers
   std::string command;
@@ -45,6 +45,9 @@ struct McpServerConfig {
   // For remote servers
   std::string url;
   std::map<std::string, std::string> headers;
+
+  // For OAuth-based servers (e.g., qwen-portal)
+  std::string auth_type;  // "oauth" for OAuth-based auth, empty for API key
 
   bool enabled = true;
 };

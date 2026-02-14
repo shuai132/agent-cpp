@@ -3,11 +3,13 @@
 #include <string>
 #include <vector>
 
+#include "auth/qwen_oauth.hpp"
 #include "core/config.hpp"
 #include "mcp/client.hpp"
 #include "mcp/transport.hpp"
 
 using namespace agent;
+using namespace agent::auth;
 using namespace agent::mcp;
 
 // ============================================================
@@ -284,6 +286,107 @@ TEST(McpManagerTest, InitializeWithEmptyConfig) {
   EXPECT_EQ(mgr.tool_count(), 0);
 
   mgr.disconnect_all();
+}
+
+// ============================================================
+// QwenOAuthTest — Qwen Portal OAuth
+// ============================================================
+
+TEST(QwenOAuthTest, Singleton) {
+  auto& auth1 = qwen_portal_auth();
+  auto& auth2 = qwen_portal_auth();
+
+  EXPECT_EQ(&auth1, &auth2);
+}
+
+TEST(QwenOAuthTest, InitialState) {
+  auto& auth = qwen_portal_auth();
+
+  // 尝试加载 token 并打印信息
+  auto token = auth.load_token();
+  if (token) {
+    std::cout << "\n=== Qwen OAuth Token ===" << std::endl;
+    std::cout << "Provider: " << token->provider << std::endl;
+    std::cout << "Access Token: " << token->access_token.substr(0, 20) << "..." << std::endl;
+    std::cout << "Refresh Token: " << token->refresh_token.substr(0, 20) << "..." << std::endl;
+    std::cout << "Expires At: " << token->expires_at << " ms" << std::endl;
+
+    // 转换为可读时间
+    auto expires_time = std::chrono::system_clock::time_point(std::chrono::milliseconds(token->expires_at));
+    auto time_t_val = std::chrono::system_clock::to_time_t(expires_time);
+    std::cout << "Expires At (local): " << std::ctime(&time_t_val);
+
+    std::cout << "Is Expired: " << (token->is_expired() ? "Yes" : "No") << std::endl;
+    std::cout << "Needs Refresh: " << (token->needs_refresh() ? "Yes" : "No") << std::endl;
+    std::cout << "========================\n" << std::endl;
+  } else {
+    std::cout << "\n[QwenOAuthTest] No token found (not logged in or no credentials)\n" << std::endl;
+  }
+
+  // 测试 has_valid_token 接口
+  bool has_token = auth.has_valid_token();
+  std::cout << "[QwenOAuthTest] has_valid_token(): " << (has_token ? "true" : "false") << std::endl;
+}
+
+TEST(QwenOAuthTest, TokenExpiry) {
+  using namespace std::chrono;
+
+  OAuthToken token;
+  token.access_token = "test_access_token";
+  token.refresh_token = "test_refresh_token";
+  // 设置 1 小时后过期
+  auto now_ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+  token.expires_at = now_ms + 3600 * 1000;  // 1 hour from now
+
+  // 新 token 应该是有效的（未过期）
+  EXPECT_FALSE(token.is_expired());
+
+  // 过期的 token 应该无效
+  token.expires_at = now_ms - 3600 * 1000;  // 1 hour ago
+  EXPECT_TRUE(token.is_expired());
+}
+
+TEST(QwenOAuthTest, TokenNearExpiry) {
+  using namespace std::chrono;
+
+  OAuthToken token;
+  token.access_token = "test_access_token";
+  token.refresh_token = "test_refresh_token";
+
+  auto now_ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
+  // 3 分钟后过期，需要刷新（在 5 分钟窗口内）
+  token.expires_at = now_ms + 3 * 60 * 1000;
+  EXPECT_TRUE(token.needs_refresh());
+
+  // 1 小时后过期，不需要刷新
+  token.expires_at = now_ms + 3600 * 1000;
+  EXPECT_FALSE(token.needs_refresh());
+}
+
+TEST(QwenOAuthTest, DeviceCodeResponseParsing) {
+  // 模拟服务器返回的设备码响应
+  json response = {{"device_code", "dev_code_123"},
+                   {"user_code", "ABCD-1234"},
+                   {"verification_uri", "https://example.com/verify"},
+                   {"verification_uri_complete", "https://example.com/verify?code=ABCD-1234"},
+                   {"expires_in", 900},
+                   {"interval", 5}};
+
+  DeviceCodeResponse dcr;
+  dcr.device_code = response["device_code"];
+  dcr.user_code = response["user_code"];
+  dcr.verification_uri = response["verification_uri"];
+  dcr.verification_uri_complete = response.value("verification_uri_complete", "");
+  dcr.expires_in = response["expires_in"];
+  dcr.interval = response.value("interval", 5);
+
+  EXPECT_EQ(dcr.device_code, "dev_code_123");
+  EXPECT_EQ(dcr.user_code, "ABCD-1234");
+  EXPECT_EQ(dcr.verification_uri, "https://example.com/verify");
+  EXPECT_EQ(dcr.verification_uri_complete, "https://example.com/verify?code=ABCD-1234");
+  EXPECT_EQ(dcr.expires_in, 900);
+  EXPECT_EQ(dcr.interval, 5);
 }
 
 TEST(McpManagerTest, InitializeWithDisabledServer) {

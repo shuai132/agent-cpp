@@ -208,6 +208,13 @@ export OPENAI_API_KEY="your-api-key"
 export OPENAI_BASE_URL="https://api.openai.com"  # Optional, can also point to OpenAI API-compatible services
 export OPENAI_MODEL="gpt-4o"
 
+# Or use Qwen Portal (OAuth authentication, no API Key required)
+export OPENAI_API_KEY="qwen-oauth"
+export OPENAI_BASE_URL="https://portal.qwen.ai"
+export OPENAI_MODEL="qwen-coder-plus-latest"
+# On first use, a browser window will open for login authentication
+# You can also pre-authenticate using qwen cli: qwen auth login
+
 # Run
 ./build/agent
 ```

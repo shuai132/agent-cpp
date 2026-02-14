@@ -2,7 +2,28 @@
 
 #include <spdlog/spdlog.h>
 
+#include "auth/qwen_oauth.hpp"
+
 namespace agent::llm {
+
+namespace {
+// Check if using Qwen Portal OAuth
+bool is_qwen_oauth(const std::string& api_key) {
+  return api_key == auth::QwenPortalConfig::OAUTH_PLACEHOLDER;
+}
+
+// Get authorization header value
+std::string get_auth_header(const ProviderConfig& config) {
+  if (is_qwen_oauth(config.api_key)) {
+    auto token = auth::qwen_portal_auth().get_valid_token();
+    if (token) {
+      return "Bearer " + token->access_token;
+    }
+    spdlog::warn("[OpenAI] Qwen OAuth token not available, using placeholder");
+  }
+  return "Bearer " + config.api_key;
+}
+}  // namespace
 
 OpenAIProvider::OpenAIProvider(const ProviderConfig& config, asio::io_context& io_ctx) : config_(config), io_ctx_(io_ctx), http_client_(io_ctx) {
   if (!config.base_url.empty()) {
@@ -28,7 +49,7 @@ std::future<LlmResponse> OpenAIProvider::complete(const LlmRequest& request) {
   net::HttpOptions options;
   options.method = "POST";
   options.body = body.dump();
-  options.headers = {{"Content-Type", "application/json"}, {"Authorization", "Bearer " + config_.api_key}};
+  options.headers = {{"Content-Type", "application/json"}, {"Authorization", get_auth_header(config_)}};
 
   // Add organization header if configured
   if (config_.organization && !config_.organization->empty()) {
@@ -136,7 +157,7 @@ void OpenAIProvider::stream(const LlmRequest& request, StreamCallback callback, 
   body["stream"] = true;
 
   std::map<std::string, std::string> headers = {
-      {"Content-Type", "application/json"}, {"Accept", "text/event-stream"}, {"Authorization", "Bearer " + config_.api_key}};
+      {"Content-Type", "application/json"}, {"Accept", "text/event-stream"}, {"Authorization", get_auth_header(config_)}};
 
   if (config_.organization && !config_.organization->empty()) {
     headers["OpenAI-Organization"] = *config_.organization;
