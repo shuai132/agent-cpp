@@ -23,7 +23,8 @@ cmake --build build --target agent_tests
 
 ## 测试命令
 
-测试框架：**GoogleTest v1.14.0**，通过 `gtest_discover_tests` 自动发现。
+- 测试框架：**GoogleTest v1.14.0**，通过 `gtest_discover_tests` 自动发现。
+- 执行测试时，需要添加超时，因为有可能阻塞，尤其是[examples](examples)。
 
 ```bash
 # 运行所有测试

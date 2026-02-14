@@ -167,12 +167,17 @@ make -j$(nproc)
 ### Run the Agent CLI
 
 ```bash
-# Set API Key
+# Set API Key (Anthropic)
 export ANTHROPIC_API_KEY="your-api-key"
 
 # Optional: custom API endpoint and model
 export ANTHROPIC_BASE_URL="https://api.anthropic.com"
 export ANTHROPIC_MODEL="claude-sonnet-4-20250514"
+
+# Or use OpenAI
+export OPENAI_API_KEY="your-api-key"
+export OPENAI_BASE_URL="https://api.openai.com"  # Optional, can also point to OpenAI API-compatible services
+export OPENAI_MODEL="gpt-4o"
 
 # Run
 ./build/agent

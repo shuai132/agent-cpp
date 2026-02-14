@@ -163,12 +163,17 @@ make -j$(nproc)
 ### 运行 Agent CLI
 
 ```bash
-# 设置 API Key
+# 设置 API Key（Anthropic）
 export ANTHROPIC_API_KEY="your-api-key"
 
 # 可选：自定义 API 地址和模型
 export ANTHROPIC_BASE_URL="https://api.anthropic.com"
 export ANTHROPIC_MODEL="claude-sonnet-4-20250514"
+
+# 或使用 OpenAI
+export OPENAI_API_KEY="your-api-key"
+export OPENAI_BASE_URL="https://api.openai.com"  # 可选，也可配置为兼容 OpenAI API 的服务地址
+export OPENAI_MODEL="gpt-4o"
 
 # 运行
 ./build/agent

@@ -1,6 +1,7 @@
 #include "llm/provider.hpp"
 
 #include "llm/anthropic.hpp"
+#include "llm/openai.hpp"
 
 namespace agent::llm {
 
@@ -27,6 +28,10 @@ std::shared_ptr<Provider> ProviderFactory::create(const std::string &name, const
     // Register Anthropic provider
     instance().register_provider("anthropic", [](const ProviderConfig &cfg, asio::io_context &ctx) {
       return std::make_shared<AnthropicProvider>(cfg, ctx);
+    });
+    // Register OpenAI provider
+    instance().register_provider("openai", [](const ProviderConfig &cfg, asio::io_context &ctx) {
+      return std::make_shared<OpenAIProvider>(cfg, ctx);
     });
   }
 
@@ -147,7 +152,12 @@ json LlmRequest::to_openai_format() const {
     json tools_json = json::array();
     for (const auto &tool : tools) {
       auto schema = tool->to_json_schema();
-      tools_json.push_back({{"type", "function"}, {"function", schema}});
+      // OpenAI uses "parameters" instead of "input_schema"
+      json func = {{"name", schema["name"]}, {"description", schema["description"]}};
+      if (schema.contains("input_schema")) {
+        func["parameters"] = schema["input_schema"];
+      }
+      tools_json.push_back({{"type", "function"}, {"function", func}});
     }
     request["tools"] = tools_json;
   }

@@ -266,7 +266,8 @@ class HttpClient::Impl {
                      [this, socket, response, buffer, callback](const asio::error_code &ec, size_t bytes_transferred) {
                        // SSL connections may return various errors on close
                        // Treat any SSL category error as potential EOF
-                       bool is_eof = (ec == asio::error::eof) || (ec.category() == asio::error::get_ssl_category());
+                       bool is_eof =
+                           (ec == asio::error::eof) || (ec.category() == asio::error::get_ssl_category()) || ec == asio::ssl::error::stream_truncated;
 
                        if (ec && !is_eof) {
                          // Some error, but we may have partial data
@@ -484,7 +485,8 @@ class HttpClient::Impl {
                         std::shared_ptr<StreamDataCallback> on_data, std::shared_ptr<std::function<void(int, const std::string &)>> on_complete) {
     asio::async_read(*socket, *buffer, asio::transfer_at_least(1),
                      [this, socket, buffer, status_code, on_data, on_complete](const asio::error_code &ec, size_t bytes_transferred) {
-                       bool is_eof = (ec == asio::error::eof) || (ec.category() == asio::error::get_ssl_category());
+                       bool is_eof =
+                           (ec == asio::error::eof) || (ec.category() == asio::error::get_ssl_category()) || ec == asio::ssl::error::stream_truncated;
 
                        if (ec && !is_eof) {
                          (*on_complete)(*status_code, "Read failed: " + ec.message());

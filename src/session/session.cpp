@@ -38,12 +38,26 @@ Session::Session(asio::io_context &io_ctx, const Config &config, AgentType agent
       id_(UUID::generate()),
       abort_signal_(std::make_shared<std::atomic<bool>>(false)),
       store_(std::move(store)) {
-  // Create provider
-  auto provider_name = "anthropic";  // Default to Anthropic
-  auto provider_config = config.get_provider(provider_name);
+  // Create provider — infer from model name, then try configured providers
+  auto model_name = agent_config_.model;
 
-  if (provider_config) {
-    provider_ = llm::ProviderFactory::instance().create(provider_name, *provider_config, io_ctx);
+  // Determine preferred provider order based on model name
+  std::vector<std::string> provider_order;
+  if (model_name.starts_with("gpt-") || model_name.starts_with("o1") || model_name.starts_with("o3") || model_name.starts_with("o4")) {
+    provider_order = {"openai", "anthropic"};
+  } else if (model_name.starts_with("claude-")) {
+    provider_order = {"anthropic", "openai"};
+  } else {
+    // Unknown model — try all configured providers
+    provider_order = {"anthropic", "openai"};
+  }
+
+  for (const auto &provider_name : provider_order) {
+    auto provider_config = config.get_provider(provider_name);
+    if (provider_config) {
+      provider_ = llm::ProviderFactory::instance().create(provider_name, *provider_config, io_ctx);
+      if (provider_) break;
+    }
   }
 }
 

@@ -29,7 +29,10 @@ static void setup_callbacks(std::shared_ptr<Session>& session) {
   });
 
   session->on_complete([](FinishReason reason) {
-    std::cout << "\n\n[Session completed: " << to_string(reason) << "]\n";
+    // 正常结束不需要提示，只在异常情况下显示
+    if (reason != FinishReason::Stop && reason != FinishReason::ToolCalls) {
+      std::cout << "\n\n[Session ended: " << to_string(reason) << "]";
+    }
   });
 
   session->on_error([](const std::string& error) {
@@ -247,28 +250,52 @@ int main(int argc, char* argv[]) {
   Config config = Config::load_default();
   std::cout << "Working dir: " << config.working_dir.string() << "\n";
 
-  // Check for API key in environment (support both ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN)
-  const char* api_key = std::getenv("ANTHROPIC_API_KEY");
-  if (!api_key) {
-    api_key = std::getenv("ANTHROPIC_AUTH_TOKEN");
+  // Check for API keys in environment — register all available providers
+  const char* anthropic_key = std::getenv("ANTHROPIC_API_KEY");
+  if (!anthropic_key) {
+    anthropic_key = std::getenv("ANTHROPIC_AUTH_TOKEN");
   }
+  const char* openai_key = std::getenv("OPENAI_API_KEY");
 
-  const char* base_url = std::getenv("ANTHROPIC_BASE_URL");
-  const char* model = std::getenv("ANTHROPIC_MODEL");
+  if (anthropic_key) {
+    const char* base_url = std::getenv("ANTHROPIC_BASE_URL");
+    const char* model = std::getenv("ANTHROPIC_MODEL");
 
-  if (api_key) {
-    config.providers["anthropic"] = ProviderConfig{"anthropic", api_key, base_url ? base_url : "https://api.anthropic.com", std::nullopt, {}};
+    config.providers["anthropic"] = ProviderConfig{"anthropic", anthropic_key, base_url ? base_url : "https://api.anthropic.com", std::nullopt, {}};
 
     if (model) {
       config.default_model = model;
     }
 
-    std::cout << "Using API: " << (base_url ? "$ANTHROPIC_BASE_URL" : "https://api.anthropic.com") << "\n";
-    std::cout << "Model: " << config.default_model << "\n\n";
-  } else {
-    std::cerr << "Error: ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN not set\n";
+    std::cout << "Provider: anthropic";
+    if (base_url) std::cout << " (" << base_url << ")";
+    std::cout << "\n";
+  }
+
+  if (openai_key) {
+    const char* base_url = std::getenv("OPENAI_BASE_URL");
+    const char* model = std::getenv("OPENAI_MODEL");
+
+    config.providers["openai"] = ProviderConfig{"openai", openai_key, base_url ? base_url : "https://api.openai.com", std::nullopt, {}};
+
+    // If OPENAI_MODEL is set, or no anthropic key available, use OpenAI model as default
+    if (model) {
+      config.default_model = model;
+    } else if (!anthropic_key) {
+      config.default_model = "gpt-4o";
+    }
+
+    std::cout << "Provider: openai";
+    if (base_url) std::cout << " (" << base_url << ")";
+    std::cout << "\n";
+  }
+
+  if (!anthropic_key && !openai_key) {
+    std::cerr << "Error: No API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY\n";
     return 0;
   }
+
+  std::cout << "Model: " << config.default_model << "\n\n";
 
   // Initialize ASIO
   asio::io_context io_ctx;
