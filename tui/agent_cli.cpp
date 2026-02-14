@@ -76,6 +76,10 @@ int main(int argc, char* argv[]) {
   state.agent_state.set_model(config.default_model);
   state.agent_state.set_session_id(session->id());
 
+  // 加载历史记录
+  auto history_file = config_paths::config_dir() / "input_history.json";
+  state.load_history_from_file(history_file);
+
   AppContext ctx{io_ctx, config, store, session, [&screen]() {
                    screen.Post(Event::Custom);
                  }};
@@ -197,6 +201,9 @@ int main(int argc, char* argv[]) {
   }
 
   // ===== 清理 =====
+  // 保存历史记录
+  state.save_history_to_file(history_file);
+
   ctx.session->cancel();
   io_ctx.stop();
   if (io_thread.joinable()) io_thread.join();

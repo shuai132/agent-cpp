@@ -208,14 +208,23 @@ void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) 
 
   // 普通消息
   std::string user_msg = state.input_text;
-  state.input_text.clear();
 
   if (state.agent_state.is_running()) {
     state.chat_log.push({EntryKind::SystemInfo, "Agent is busy, please wait...", ""});
     return;
   }
 
+  // 将用户消息添加到历史记录（除非它已经是历史记录的一部分）
+  if (!user_msg.empty()) {
+    if (state.input_history.empty() || state.input_history.back() != user_msg) {
+      state.input_history.push_back(user_msg);
+    }
+    // 重置历史记录索引，以便下次按向上箭头可以看到最新历史
+    state.history_index = -1;
+  }
+
   state.chat_log.push({EntryKind::UserMsg, user_msg, ""});
+  state.input_text.clear();  // 清空输入框
   state.agent_state.set_running(true);
   state.auto_scroll = true;
   state.scroll_y = 1.0f;
@@ -637,6 +646,58 @@ bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& scre
         return true;
       }
     }
+  }
+
+  // 向上箭头：浏览历史记录（显示更早的记录）
+  if (event == Event::ArrowUp && !state.show_cmd_menu && !state.show_file_path_menu) {
+    if (state.input_history.empty()) {
+      return true;  // 没有历史记录，直接返回
+    }
+
+    // 如果当前是新输入（不在历史记录中），但不是空输入，则保存当前输入
+    if (state.history_index == -1 && !state.input_text.empty()) {
+      if (state.input_history.empty() || state.input_history.back() != state.input_text) {
+        state.input_history.push_back(state.input_text);
+      }
+      // 立即移动到刚添加的记录，然后跳到前一条
+      state.history_index = 0;  // 指向最新添加的记录
+      // 如果有至少2条记录，显示前一条
+      if (state.input_history.size() > 1) {
+        int array_index = static_cast<int>(state.input_history.size()) - 2;  // 倒数第二条
+        state.input_text = state.input_history[array_index];
+        state.input_cursor_pos = static_cast<int>(state.input_text.size());
+        state.history_index = 1;  // 指向倒数第二条
+      }
+    } else if (state.history_index < static_cast<int>(state.input_history.size()) - 1) {
+      // 移动到上一条历史记录（显示更早的记录）
+      state.history_index++;
+      // 显示对应的历史记录（history_index=0对应最新，即数组索引size()-1）
+      int array_index = static_cast<int>(state.input_history.size()) - 1 - state.history_index;
+      state.input_text = state.input_history[array_index];
+      state.input_cursor_pos = static_cast<int>(state.input_text.size());
+    }
+    return true;
+  }
+
+  // 向下箭头：浏览历史记录（显示更新的记录或回到当前输入）
+  if (event == Event::ArrowDown && !state.show_cmd_menu && !state.show_file_path_menu) {
+    // 如果已经在当前输入，直接返回
+    if (state.history_index <= -1) {
+      return true;
+    }
+
+    // 移动到下一条历史记录或回到当前输入
+    state.history_index--;
+    if (state.history_index < 0) {
+      // 回到当前输入，不改变 input_text，保持用户可能已编辑的内容
+      state.history_index = -1;
+    } else {
+      // 显示更新的历史记录（较小的history_index对应较新的记录）
+      int array_index = static_cast<int>(state.input_history.size()) - 1 - state.history_index;
+      state.input_text = state.input_history[array_index];
+      state.input_cursor_pos = static_cast<int>(state.input_text.size());
+    }
+    return true;
   }
 
   // Tab: 切换模式

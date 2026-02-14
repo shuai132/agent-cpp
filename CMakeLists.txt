@@ -211,6 +211,7 @@ if (AGENT_BUILD_TESTS)
             tests/test_builtin_tools.cpp
             tests/test_net.cpp
             tests/test_agent_cli.cpp
+            tests/test_history_logic.cpp
             # TUI components for CLI tests
             tui/tui_components.cpp
     )

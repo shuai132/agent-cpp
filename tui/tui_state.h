@@ -9,6 +9,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,8 @@ struct AppState {
   // ----- 输入 -----
   std::string input_text;
   int input_cursor_pos = 0;
+  std::vector<std::string> input_history;  // 输入历史记录
+  int history_index = -1;                  // 当前浏览的历史记录索引 (-1 表示当前输入)
 
   // ----- 命令菜单 -----
   int cmd_menu_selected = 0;
@@ -69,6 +72,10 @@ struct AppState {
   void reset_view();
   void clear_all();
   void reset_question_panel();  // 重置 question 面板状态
+
+  // ----- 历史记录持久化 -----
+  void save_history_to_file(const std::filesystem::path& filepath);
+  void load_history_from_file(const std::filesystem::path& filepath);
 };
 
 // TUI 应用的外部依赖/上下文（生命周期由 main 管理）
