@@ -114,6 +114,19 @@ struct ParsedCommand {
 ParsedCommand parse_command(const std::string& input);
 
 // ============================================================
+// 文件路径自动完成
+// ============================================================
+
+struct FilePathMatch {
+  std::string path;      // 相对路径（相对于当前工作目录）
+  std::string display;   // 显示名称（文件名或目录名）
+  bool is_directory;     // 是否为目录
+};
+
+std::vector<FilePathMatch> match_file_paths(const std::string& prefix);
+std::string extract_file_path_prefix(const std::string& input);
+
+// ============================================================
 // 文本工具函数
 // ============================================================
 

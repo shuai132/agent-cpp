@@ -32,6 +32,9 @@ ftxui::Element build_status_bar(const AppState& state);
 // 构建命令提示菜单
 ftxui::Element build_cmd_menu(const AppState& state);
 
+// 构建文件路径提示菜单
+ftxui::Element build_file_path_menu(const AppState& state);
+
 // 构建会话列表面板
 ftxui::Element build_sessions_panel(AppState& state);
 

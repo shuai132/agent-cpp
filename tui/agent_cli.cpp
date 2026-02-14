@@ -92,8 +92,21 @@ int main(int argc, char* argv[]) {
       auto matches = match_commands(state.input_text);
       state.show_cmd_menu = !matches.empty();
       state.cmd_menu_selected = 0;
+      state.show_file_path_menu = false; // 确保文件路径菜单关闭
     } else {
       state.show_cmd_menu = false;
+      
+      // 检查是否输入了 @ 符号以启用文件路径自动完成
+      size_t at_pos = state.input_text.rfind('@');
+      if (at_pos != std::string::npos) {
+        std::string path_prefix = state.input_text.substr(at_pos + 1);
+        state.file_path_matches = match_file_paths(path_prefix);
+        state.show_file_path_menu = !state.file_path_matches.empty();
+        state.file_path_menu_selected = 0;
+      } else {
+        state.show_file_path_menu = false;
+        state.file_path_matches.clear();
+      }
     }
   };
   input_option.on_enter = [&] {
@@ -113,10 +126,12 @@ int main(int argc, char* argv[]) {
     auto status_bar = build_status_bar(state);
     auto chat_view = build_chat_view(state);
     auto cmd_menu_element = build_cmd_menu(state);
+    auto file_path_menu_element = build_file_path_menu(state);
 
     auto mode_str = to_string(state.agent_state.mode());
     auto input_area = vbox({
         cmd_menu_element,
+        file_path_menu_element,
         separatorHeavy() | dim,
         input_with_prompt->Render(),
         separatorHeavy() | dim,

@@ -4,6 +4,8 @@
 #include <cctype>
 #include <cstdio>
 #include <sstream>
+#include <filesystem>
+#include <functional>
 
 namespace agent_cli {
 
@@ -306,6 +308,112 @@ std::string AgentState::status_text() const {
   s += " | Tokens: " + format_tokens(input_tokens()) + "in/" + format_tokens(output_tokens()) + "out";
   s += is_running() ? " | [Running...]" : " | [Ready]";
   return s;
+}
+
+// ============================================================
+// 文件路径自动完成
+// ============================================================
+
+std::string extract_file_path_prefix(const std::string& input) {
+  // 查找最后一个 @ 符号
+  size_t at_pos = input.rfind('@');
+  if (at_pos == std::string::npos) {
+    return "";
+  }
+  
+  // 提取 @ 符号之后的部分
+  std::string path_part = input.substr(at_pos + 1);
+  
+  // 如果路径部分包含空格（且不是在引号内），则只取到第一个空格前的部分
+  // 这里简化处理，直接返回路径部分
+  return path_part;
+}
+
+std::vector<FilePathMatch> match_file_paths(const std::string& prefix) {
+  std::vector<FilePathMatch> result;
+  
+  if (prefix.empty()) {
+    // 如果没有前缀，列出当前目录的内容
+    try {
+      for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::current_path())) {
+        std::string filename = entry.path().filename().string();
+        std::string relative_path = filename;  // 对于当前目录的文件，相对路径就是文件名
+        if (entry.is_directory()) {
+          result.push_back({relative_path, filename + "/", true});
+        } else {
+          result.push_back({relative_path, filename, false});
+        }
+      }
+    } catch (...) {
+      // 忽略错误
+    }
+    return result;
+  }
+  
+  // 分离目录路径和文件名前缀
+  std::filesystem::path prefix_path(prefix);
+  std::filesystem::path dir_path;
+  std::string file_prefix;
+  
+  // 如果前缀以 / 结尾或者是目录，则将其视为目录路径
+  if (prefix.back() == '/' || std::filesystem::is_directory(prefix_path)) {
+    dir_path = prefix_path;
+    file_prefix = "";
+  } else {
+    // 否则分离目录和文件名
+    dir_path = prefix_path.parent_path();
+    if (dir_path.string().empty()) {
+      dir_path = std::filesystem::current_path();
+    }
+    file_prefix = prefix_path.filename().string();
+  }
+  
+  // 确保目录存在
+  if (!std::filesystem::exists(dir_path) || !std::filesystem::is_directory(dir_path)) {
+    return result;
+  }
+  
+  try {
+    // 计算相对于当前工作目录的路径前缀
+    std::filesystem::path current_dir = std::filesystem::current_path();
+    std::string path_prefix = std::filesystem::relative(dir_path, current_dir).string();
+    if (path_prefix == ".") path_prefix = "";  // 如果是当前目录，移除点
+    
+    for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
+      std::string filename = entry.path().filename().string();
+      
+      // 检查文件名是否匹配前缀（不区分大小写）
+      std::string lower_filename = filename;
+      std::string lower_prefix = file_prefix;
+      std::transform(lower_filename.begin(), lower_filename.end(), lower_filename.begin(), ::tolower);
+      std::transform(lower_prefix.begin(), lower_prefix.end(), lower_prefix.begin(), ::tolower);
+      
+      if (file_prefix.empty() || 
+          lower_filename.length() >= lower_prefix.length() &&
+          lower_filename.substr(0, lower_prefix.length()) == lower_prefix) {
+        
+        std::string display_name = filename;
+        std::string relative_path = path_prefix.empty() ? filename : path_prefix + "/" + filename;
+        if (entry.is_directory()) {
+          display_name += "/";
+          relative_path += "/";
+        }
+        
+        result.push_back({relative_path, display_name, entry.is_directory()});
+      }
+    }
+    
+    // 按照名称排序，目录优先
+    std::sort(result.begin(), result.end(), [](const FilePathMatch& a, const FilePathMatch& b) {
+      if (a.is_directory && !b.is_directory) return true;
+      if (!a.is_directory && b.is_directory) return false;
+      return a.display < b.display;
+    });
+  } catch (...) {
+    // 忽略错误
+  }
+  
+  return result;
 }
 
 }  // namespace agent_cli

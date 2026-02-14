@@ -7,6 +7,9 @@ void AppState::reset_view() {
   scroll_y = 1.0f;
   auto_scroll = true;
   last_snapshot_size = 0;
+  show_file_path_menu = false;
+  file_path_matches.clear();
+  file_path_menu_selected = 0;
 }
 
 void AppState::clear_all() {

@@ -32,9 +32,38 @@ void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) 
       return;
     }
   }
+  
+  // 文件路径菜单补全
+  if (state.show_file_path_menu) {
+    int count = static_cast<int>(state.file_path_matches.size());
+    if (count > 0 && state.file_path_menu_selected < count) {
+      // 获取当前输入文本直到最后的 @ 符号
+      size_t at_pos = state.input_text.rfind('@');
+      if (at_pos != std::string::npos) {
+        std::string before_at = state.input_text.substr(0, at_pos + 1);
+        std::string path_to_insert = state.file_path_matches[state.file_path_menu_selected].path;
+        
+        // 如果是目录，添加斜杠
+        if (state.file_path_matches[state.file_path_menu_selected].is_directory) {
+          path_to_insert += "/";
+        }
+        
+        // 添加一个空格到路径后面
+        path_to_insert += " ";
+        
+        state.input_text = before_at + path_to_insert;
+        state.input_cursor_pos = static_cast<int>(state.input_text.size());
+        state.show_file_path_menu = false;
+        state.file_path_matches.clear();
+        return; // 不继续处理提交
+      }
+    }
+  }
 
   if (state.input_text.empty()) return;
   state.show_cmd_menu = false;
+  state.show_file_path_menu = false;
+  state.file_path_matches.clear();
 
   auto cmd = parse_command(state.input_text);
   switch (cmd.type) {
@@ -551,9 +580,53 @@ bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& scre
       }
     }
   }
+  
+  // 文件路径菜单导航
+  if (state.show_file_path_menu && !state.show_cmd_menu) {  // 只在命令菜单未显示时处理
+    int count = static_cast<int>(state.file_path_matches.size());
+    if (count > 0) {
+      if (event == Event::ArrowUp) {
+        state.file_path_menu_selected = (state.file_path_menu_selected - 1 + count) % count;
+        return true;
+      }
+      if (event == Event::ArrowDown) {
+        state.file_path_menu_selected = (state.file_path_menu_selected + 1) % count;
+        return true;
+      }
+      if (event == Event::Tab || event == Event::Return) {
+        if (state.file_path_menu_selected < count) {
+          // 获取当前输入文本直到最后的 @ 符号
+          size_t at_pos = state.input_text.rfind('@');
+          if (at_pos != std::string::npos) {
+            std::string before_at = state.input_text.substr(0, at_pos + 1);
+            std::string path_to_insert = state.file_path_matches[state.file_path_menu_selected].path;
+            
+            // 如果是目录，添加斜杠
+            if (state.file_path_matches[state.file_path_menu_selected].is_directory) {
+              path_to_insert += "/";
+            }
+            
+            // 添加一个空格到路径后面
+            path_to_insert += " ";
+            
+            state.input_text = before_at + path_to_insert;
+            state.input_cursor_pos = static_cast<int>(state.input_text.size());
+            state.show_file_path_menu = false;
+            state.file_path_matches.clear();
+          }
+        }
+        return true;
+      }
+      if (event == Event::Escape) {
+        state.show_file_path_menu = false;
+        state.file_path_matches.clear();
+        return true;
+      }
+    }
+  }
 
   // Tab: 切换模式
-  if (event == Event::Tab && !state.show_cmd_menu) {
+  if (event == Event::Tab && !state.show_cmd_menu && !state.show_file_path_menu) {
     state.agent_state.toggle_mode();
     return true;
   }

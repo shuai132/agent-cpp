@@ -32,6 +32,11 @@ struct AppState {
   int cmd_menu_selected = 0;
   bool show_cmd_menu = false;
 
+  // ----- 文件路径自动完成菜单 -----
+  int file_path_menu_selected = 0;
+  bool show_file_path_menu = false;
+  std::vector<FilePathMatch> file_path_matches;
+
   // ----- 滚动控制 -----
   float scroll_y = 1.0f;          // 0.0=顶部, 1.0=底部
   bool auto_scroll = true;        // 新消息自动滚到底，用户上滚后暂停

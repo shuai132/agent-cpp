@@ -307,6 +307,57 @@ Element build_cmd_menu(const AppState& state) {
 }
 
 // ============================================================
+// 文件路径菜单
+// ============================================================
+
+Element build_file_path_menu(const AppState& state) {
+  if (!state.show_file_path_menu || state.file_path_matches.empty()) return text("");
+
+  // 限制最大显示项目数，防止菜单过长
+  const int MAX_VISIBLE_ITEMS = 10;
+  int total_items = static_cast<int>(state.file_path_matches.size());
+  int start_idx = 0;
+  int end_idx = total_items;
+
+  // 计算可视范围，确保选中的项目在可视区域内
+  if (total_items > MAX_VISIBLE_ITEMS) {
+    // 选中的项目应该在中间附近，但不能超过边界
+    int half_visible = MAX_VISIBLE_ITEMS / 2;
+    start_idx = state.file_path_menu_selected - half_visible;
+    start_idx = std::max(0, std::min(start_idx, total_items - MAX_VISIBLE_ITEMS));
+    end_idx = std::min(start_idx + MAX_VISIBLE_ITEMS, total_items);
+  }
+
+  Elements menu_items;
+  for (int j = start_idx; j < end_idx; ++j) {
+    const auto& match = state.file_path_matches[j];
+    bool selected = (j == state.file_path_menu_selected);
+    auto item = hbox({
+        text("  "),
+        text(match.display) | (match.is_directory ? color(Color::Blue) : color(Color::White)),
+        text("  "),
+    });
+    if (selected) {
+      item = item | bgcolor(Color::GrayDark) | color(Color::White);
+    }
+    menu_items.push_back(item);
+  }
+
+  auto menu = vbox(menu_items);
+  
+  // 如果超过最大显示数量，添加滚动指示
+  if (total_items > MAX_VISIBLE_ITEMS) {
+    std::string indicator = "(" + std::to_string(start_idx + 1) + "-" + std::to_string(end_idx) + "/" + std::to_string(total_items) + ")";
+    menu = vbox({
+      menu,
+      hbox({text("  "), text(indicator) | dim, filler()})
+    });
+  }
+
+  return menu | borderRounded | color(Color::GrayLight) | yflex;
+}
+
+// ============================================================
 // 会话列表面板
 // ============================================================
 
