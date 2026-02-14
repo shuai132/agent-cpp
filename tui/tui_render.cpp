@@ -2,10 +2,13 @@
 
 #include <filesystem>
 #include <ftxui/screen/color.hpp>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
 namespace agent_cli {
+
+using json = nlohmann::json;
 
 using namespace ftxui;
 
@@ -71,6 +74,28 @@ Element render_text_entry(const ChatEntry& entry) {
 // 工具调用卡片渲染
 // ============================================================
 
+// 解析 JSON 参数为 key: value 格式的行
+static std::vector<std::pair<std::string, std::string>> parse_args_to_kv(const std::string& args_json) {
+  std::vector<std::pair<std::string, std::string>> result;
+  try {
+    auto j = json::parse(args_json);
+    if (j.is_object()) {
+      for (auto it = j.begin(); it != j.end(); ++it) {
+        std::string value;
+        if (it.value().is_string()) {
+          value = it.value().get<std::string>();
+        } else {
+          value = it.value().dump();
+        }
+        result.emplace_back(it.key(), value);
+      }
+    }
+  } catch (...) {
+    // JSON 解析失败，返回空
+  }
+  return result;
+}
+
 Element render_tool_group(const ToolGroup& group, bool expanded) {
   bool is_error = group.has_result && group.result.text.find("✗") != std::string::npos;
   bool is_running = !group.has_result;
@@ -78,37 +103,64 @@ Element render_tool_group(const ToolGroup& group, bool expanded) {
   std::string status_icon = is_running ? "⏳" : (is_error ? "✗" : "✓");
   Color status_color = is_running ? Color::Yellow : (is_error ? Color::Red : Color::Green);
 
-  // 卡片头部
-  std::string header_text = group.call.text;
-  if (!expanded && group.has_result) {
-    auto first_line = group.result.detail.substr(0, group.result.detail.find('\n'));
-    auto summary = truncate_text(first_line, 80);
-    if (!summary.empty()) header_text += "  " + summary;
-  }
-  if (is_running) header_text += "  running...";
+  // 解析参数为 key-value 格式
+  auto args_kv = parse_args_to_kv(group.call.detail);
 
+  // 构造卡片头部状态文本
+  std::string status_text;
+  if (is_running) {
+    status_text = "running...";
+  } else if (is_error) {
+    status_text = "error";
+  } else {
+    status_text = "ok";
+  }
+
+  // 卡片头部行
   auto header_line = hbox({
       text(" " + status_icon + "  ") | color(status_color),
-      text(header_text) | (is_running ? dim : bold),
+      text(group.call.text) | bold,
+      text("  " + status_text) | dim,
   });
 
-  if (!expanded) {
-    return hbox({text(" "), vbox({header_line}) | borderRounded});
+  // 构建卡片内容
+  Elements card_content;
+  card_content.push_back(header_line);
+
+  // 始终显示参数（key: value 格式）
+  for (const auto& [key, value] : args_kv) {
+    // 处理多行值
+    auto value_lines = split_lines(value);
+    if (value_lines.size() <= 1) {
+      card_content.push_back(hbox({text(" " + key + ": ") | dim, text(truncate_text(value, 100))}));
+    } else {
+      card_content.push_back(hbox({text(" " + key + ": ") | dim, text(truncate_text(value_lines[0], 80) + " ...")}));
+    }
   }
 
-  // 展开模式
-  Elements card_content;
+  if (!expanded) {
+    return hbox({text(" "), vbox(card_content) | borderRounded});
+  }
+
+  // 展开模式：显示完整参数和结果
+  card_content.clear();
   card_content.push_back(header_line);
   card_content.push_back(text(""));
 
-  // 参数区域
-  auto args_lines = split_lines(group.call.detail);
-  card_content.push_back(text("   Arguments:") | bold | dim);
-  for (size_t i = 0; i < args_lines.size() && i < 20; ++i) {
-    card_content.push_back(text("   " + args_lines[i]) | dim);
-  }
-  if (args_lines.size() > 20) {
-    card_content.push_back(text("   ...(" + std::to_string(args_lines.size()) + " lines)") | dim);
+  // 完整参数区域
+  for (const auto& [key, value] : args_kv) {
+    auto value_lines = split_lines(value);
+    if (value_lines.size() <= 1) {
+      card_content.push_back(text("   " + key + ": " + value) | dim);
+    } else {
+      card_content.push_back(text("   " + key + ":") | dim);
+      for (size_t i = 0; i < value_lines.size() && i < 20; ++i) {
+        card_content.push_back(text("     " + value_lines[i]) | dim);
+      }
+      if (value_lines.size() > 20) {
+        card_content.push_back(text("     ...(" + std::to_string(value_lines.size()) + " lines)") | dim);
+      }
+    }
   }
 
   // 结果区域
