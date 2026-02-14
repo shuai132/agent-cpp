@@ -105,7 +105,7 @@ bool McpClient::initialize() {
   req.method = "initialize";
   req.id = next_request_id_++;
   req.params =
-      json{{"protocolVersion", "2024-11-05"}, {"capabilities", json::object()}, {"clientInfo", json{{"name", "agent-cpp"}, {"version", "0.1.0"}}}};
+      json{{"protocolVersion", "2024-11-05"}, {"capabilities", json::object()}, {"clientInfo", json{{"name", "agent-sdk"}, {"version", "0.1.0"}}}};
 
   auto future = transport_->send_request(req);
 

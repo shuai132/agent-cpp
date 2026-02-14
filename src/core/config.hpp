@@ -115,7 +115,7 @@ std::filesystem::path project_config_file();
 std::optional<std::filesystem::path> find_git_root(const std::filesystem::path &start_dir);
 
 // Find AGENTS.md / CLAUDE.md files (hierarchical, multi-convention compatible)
-// Searches: AGENTS.md, .agent-cpp/AGENTS.md, .agents/AGENTS.md,
+// Searches: AGENTS.md, .agent-sdk/AGENTS.md, .agents/AGENTS.md,
 //           CLAUDE.md, .claude/CLAUDE.md, .opencode/AGENTS.md
 // Stops at git worktree root (or filesystem root)
 std::vector<std::filesystem::path> find_agent_instructions(const std::filesystem::path &start_dir);

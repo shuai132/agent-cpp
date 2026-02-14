@@ -48,12 +48,12 @@ class SkillRegistry {
 
   // Discover skills from all standard locations:
   //   Project-local (traversing up from start_dir to git root):
-  //     .agent-cpp/skills/*/SKILL.md
+  //     .agent-sdk/skills/*/SKILL.md
   //     .agents/skills/*/SKILL.md
   //     .claude/skills/*/SKILL.md
   //     .opencode/skills/*/SKILL.md
   //   Global:
-  //     ~/.config/agent-cpp/skills/*/SKILL.md
+  //     ~/.config/agent-sdk/skills/*/SKILL.md
   //     ~/.agents/skills/*/SKILL.md
   //     ~/.claude/skills/*/SKILL.md
   //     ~/.config/opencode/skills/*/SKILL.md

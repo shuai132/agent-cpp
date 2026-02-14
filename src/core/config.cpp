@@ -312,7 +312,7 @@ fs::path home_dir() {
 }
 
 fs::path config_dir() {
-  return home_dir() / ".config" / "agent-cpp";
+  return home_dir() / ".config" / "agent-sdk";
 }
 
 fs::path default_config_file() {
@@ -320,7 +320,7 @@ fs::path default_config_file() {
 }
 
 fs::path project_config_file() {
-  return fs::current_path() / ".agent-cpp" / "config.json";
+  return fs::current_path() / ".agent-sdk" / "config.json";
 }
 
 std::optional<fs::path> find_git_root(const fs::path &start_dir) {
@@ -350,7 +350,7 @@ std::vector<fs::path> find_agent_instructions(const fs::path &start_dir) {
     struct {
       const char *path;
     } candidates[] = {
-        {"AGENTS.md"}, {".agent-cpp/AGENTS.md"}, {".agents/AGENTS.md"}, {".opencode/AGENTS.md"}, {"CLAUDE.md"}, {".claude/CLAUDE.md"},
+        {"AGENTS.md"}, {".agent-sdk/AGENTS.md"}, {".agents/AGENTS.md"}, {".opencode/AGENTS.md"}, {"CLAUDE.md"}, {".claude/CLAUDE.md"},
     };
 
     for (const auto &c : candidates) {
@@ -372,10 +372,10 @@ std::vector<fs::path> find_agent_instructions(const fs::path &start_dir) {
   std::reverse(result.begin(), result.end());
 
   // Add global instructions (highest generality, prepended)
-  // Search order: agent-cpp own config > cross-tool shared > Claude compat > OpenCode compat
+  // Search order: agent-sdk own config > cross-tool shared > Claude compat > OpenCode compat
   auto home = home_dir();
   std::vector<fs::path> global_candidates = {
-      config_dir() / "AGENTS.md",                   // ~/.config/agent-cpp/AGENTS.md
+      config_dir() / "AGENTS.md",                   // ~/.config/agent-sdk/AGENTS.md
       home / ".agents" / "AGENTS.md",               // ~/.agents/AGENTS.md
       home / ".claude" / "CLAUDE.md",               // ~/.claude/CLAUDE.md
       home / ".config" / "opencode" / "AGENTS.md",  // ~/.config/opencode/AGENTS.md

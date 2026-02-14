@@ -2,7 +2,7 @@
 
 ## 1. 概述
 
-agent-cpp 的 Skill 系统实现了对主流 AI Agent 工具生态的兼容，支持加载和使用来自 OpenCode、Claude Code 以及跨工具通用格式（
+agent-sdk 的 Skill 系统实现了对主流 AI Agent 工具生态的兼容，支持加载和使用来自 OpenCode、Claude Code 以及跨工具通用格式（
 `.agents/`）的指令文件和技能包。
 
 核心目标：
@@ -20,15 +20,15 @@ agent-cpp 的 Skill 系统实现了对主流 AI Agent 工具生态的兼容，�
 | **Claude Code** | `CLAUDE.md` / `.claude/CLAUDE.md`    | `.claude/skills/*/SKILL.md`    | Anthropic 最早引入 |
 | **OpenCode**    | `AGENTS.md` / `.opencode/AGENTS.md`  | `.opencode/skills/*/SKILL.md`  | 兼容 CLAUDE.md   |
 | **跨工具通用**       | `.agents/AGENTS.md`                  | `.agents/skills/*/SKILL.md`    | 多个工具共同支持       |
-| **agent-cpp**   | `AGENTS.md` / `.agent-cpp/AGENTS.md` | `.agent-cpp/skills/*/SKILL.md` | 本项目，兼容以上所有     |
+| **agent-sdk**   | `AGENTS.md` / `.agent-sdk/AGENTS.md` | `.agent-sdk/skills/*/SKILL.md` | 本项目，兼容以上所有     |
 
-agent-cpp 同时支持所有上述格式，使用户无需为不同的 Agent 工具维护多套配置。
+agent-sdk 同时支持所有上述格式，使用户无需为不同的 Agent 工具维护多套配置。
 
 ## 3. AGENTS.md 层级发现
 
 ### 3.1 工作原理
 
-agent-cpp 启动时，会从当前工作目录向上遍历目录层级，收集所有找到的指令文件。遍历在 **git 仓库根目录**（包含 `.git`
+agent-sdk 启动时，会从当前工作目录向上遍历目录层级，收集所有找到的指令文件。遍历在 **git 仓库根目录**（包含 `.git`
 的目录）处停止，防止搜索范围超出项目边界。
 
 ```
@@ -42,7 +42,7 @@ agent-cpp 启动时，会从当前工作目录向上遍历目录层级，收集�
 | 优先级 | 路径                     | 规范来源           |
 |-----|------------------------|----------------|
 | 1   | `AGENTS.md`            | 通用主流格式         |
-| 2   | `.agent-cpp/AGENTS.md` | agent-cpp 自有   |
+| 2   | `.agent-sdk/AGENTS.md` | agent-sdk 自有   |
 | 3   | `.agents/AGENTS.md`    | 跨工具通用          |
 | 4   | `.opencode/AGENTS.md`  | OpenCode 兼容    |
 | 5   | `CLAUDE.md`            | Claude Code 兼容 |
@@ -54,7 +54,7 @@ agent-cpp 启动时，会从当前工作目录向上遍历目录层级，收集�
 
 | 优先级 | 路径                              | 说明             |
 |-----|---------------------------------|----------------|
-| 1   | `~/.config/agent-cpp/AGENTS.md` | agent-cpp 全局配置 |
+| 1   | `~/.config/agent-sdk/AGENTS.md` | agent-sdk 全局配置 |
 | 2   | `~/.agents/AGENTS.md`           | 跨工具全局共享        |
 | 3   | `~/.claude/CLAUDE.md`           | Claude Code 全局 |
 | 4   | `~/.config/opencode/AGENTS.md`  | OpenCode 全局    |
@@ -165,7 +165,7 @@ metadata:
 
 | 搜索路径                           | 来源             |
 |--------------------------------|----------------|
-| `.agent-cpp/skills/*/SKILL.md` | agent-cpp 自有   |
+| `.agent-sdk/skills/*/SKILL.md` | agent-sdk 自有   |
 | `.agents/skills/*/SKILL.md`    | 跨工具通用          |
 | `.claude/skills/*/SKILL.md`    | Claude Code 兼容 |
 | `.opencode/skills/*/SKILL.md`  | OpenCode 兼容    |
@@ -174,7 +174,7 @@ metadata:
 
 | 搜索路径                                    | 来源             |
 |-----------------------------------------|----------------|
-| `~/.config/agent-cpp/skills/*/SKILL.md` | agent-cpp 全局   |
+| `~/.config/agent-sdk/skills/*/SKILL.md` | agent-sdk 全局   |
 | `~/.agents/skills/*/SKILL.md`           | 跨工具全局共享        |
 | `~/.claude/skills/*/SKILL.md`           | Claude Code 全局 |
 | `~/.config/opencode/skills/*/SKILL.md`  | OpenCode 全局    |
@@ -182,7 +182,7 @@ metadata:
 ### 5.4 去重策略
 
 **First-wins**：同名 skill 只保留第一个发现的。由于项目级路径先于全局路径搜索，项目级 skill 总是优先于全局 skill。在同一层级内，
-`.agent-cpp/` 优先于 `.agents/` 优先于 `.claude/` 优先于 `.opencode/`。
+`.agent-sdk/` 优先于 `.agents/` 优先于 `.claude/` 优先于 `.opencode/`。
 
 ### 5.5 错误处理
 

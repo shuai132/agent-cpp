@@ -84,8 +84,8 @@ TEST(ConfigPathsTest, ConfigDir) {
   auto config_dir = config_paths::config_dir();
 
   EXPECT_FALSE(config_dir.empty());
-  // 配置目录应以 "agent-cpp" 结尾
-  EXPECT_EQ(config_dir.filename(), "agent-cpp");
+  // 配置目录应以 "agent-sdk" 结尾
+  EXPECT_EQ(config_dir.filename(), "agent-sdk");
   // 父目录应为 ".config"
   EXPECT_EQ(config_dir.parent_path().filename(), ".config");
 }

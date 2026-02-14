@@ -1,6 +1,6 @@
-# AGENTS.md — agent-cpp
+# AGENTS.md — agent-sdk
 
-轻量级 C++20 AI Agent SDK，基于 Asio 和 OpenSSL 构建。编译为原生静态库 （`libagent_core.a`），零运行时依赖。
+轻量级 C++20 AI Agent SDK，基于 Asio 和 OpenSSL 构建。编译为原生静态库 （`libagent_sdk.a`），零运行时依赖。
 
 ## 构建命令
 
@@ -12,14 +12,14 @@ cmake -B build
 cmake --build build -j$(nproc)
 
 # 仅构建库
-cmake --build build --target agent_core
+cmake --build build --target agent_sdk
 
 # 仅构建测试
 cmake --build build --target agent_tests
 ```
 
 **前置条件**：CMake >= 3.20、支持 C++20 的编译器、系统安装的 OpenSSL。
-其余依赖（nlohmann/json、asio、spdlog、googletest）通过 CMake FetchContent 自动拉取。
+其余依赖（nlohmann/json、asio、spdlog、ftxui、googletest）通过 CMake FetchContent 自动拉取。
 
 ## 测试命令
 

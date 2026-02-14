@@ -55,7 +55,7 @@ class SkillParserTest : public ::testing::Test {
   fs::path test_dir_;
 
   void SetUp() override {
-    test_dir_ = fs::temp_directory_path() / "agent_cpp_skill_test";
+    test_dir_ = fs::temp_directory_path() / "agent_sdk_skill_test";
     fs::create_directories(test_dir_);
   }
 
@@ -175,7 +175,7 @@ class SkillRegistryTest : public ::testing::Test {
   fs::path test_dir_;
 
   void SetUp() override {
-    test_dir_ = fs::temp_directory_path() / "agent_cpp_registry_test";
+    test_dir_ = fs::temp_directory_path() / "agent_sdk_registry_test";
     fs::create_directories(test_dir_);
     SkillRegistry::instance().clear();
   }
@@ -193,9 +193,9 @@ class SkillRegistryTest : public ::testing::Test {
   }
 };
 
-TEST_F(SkillRegistryTest, DiscoverFromAgentsCppDir) {
-  auto agent_cpp_dir = test_dir_ / ".agent-cpp";
-  create_skill_in(agent_cpp_dir, "my-tool", "A test tool");
+TEST_F(SkillRegistryTest, DiscoverFromAgentsSdkDir) {
+  auto agent_sdk_dir = test_dir_ / ".agent-sdk";
+  create_skill_in(agent_sdk_dir, "my-tool", "A test tool");
 
   SkillRegistry::instance().discover(test_dir_);
 
@@ -239,17 +239,17 @@ TEST_F(SkillRegistryTest, DiscoverFromOpenCodeDir) {
 
 TEST_F(SkillRegistryTest, FirstWinsDedup) {
   // Create same-named skill in two locations
-  auto agent_cpp_dir = test_dir_ / ".agent-cpp";
+  auto agent_sdk_dir = test_dir_ / ".agent-sdk";
   auto agents_dir = test_dir_ / ".agents";
-  create_skill_in(agent_cpp_dir, "dup-skill", "From agent-cpp");
+  create_skill_in(agent_sdk_dir, "dup-skill", "From agent-sdk");
   create_skill_in(agents_dir, "dup-skill", "From agents");
 
   SkillRegistry::instance().discover(test_dir_);
 
-  // .agent-cpp is searched first, so its version should win
+  // .agent-sdk is searched first, so its version should win
   auto skill = SkillRegistry::instance().get("dup-skill");
   ASSERT_TRUE(skill.has_value());
-  EXPECT_EQ(skill->description, "From agent-cpp");
+  EXPECT_EQ(skill->description, "From agent-sdk");
 }
 
 TEST_F(SkillRegistryTest, ExtraPaths) {
@@ -266,15 +266,15 @@ TEST_F(SkillRegistryTest, ExtraPaths) {
 }
 
 TEST_F(SkillRegistryTest, SkipInvalidSkills) {
-  auto agent_cpp_dir = test_dir_ / ".agent-cpp";
+  auto agent_sdk_dir = test_dir_ / ".agent-sdk";
 
   // Create an invalid skill (no frontmatter)
-  auto bad_dir = agent_cpp_dir / "skills" / "bad-skill";
+  auto bad_dir = agent_sdk_dir / "skills" / "bad-skill";
   fs::create_directories(bad_dir);
   std::ofstream(bad_dir / "SKILL.md") << "No frontmatter\n";
 
   // Create a valid skill
-  create_skill_in(agent_cpp_dir, "good-skill", "Valid skill");
+  create_skill_in(agent_sdk_dir, "good-skill", "Valid skill");
 
   SkillRegistry::instance().discover(test_dir_);
 
@@ -292,7 +292,7 @@ class AgentInstructionsTest : public ::testing::Test {
   fs::path test_dir_;
 
   void SetUp() override {
-    test_dir_ = fs::temp_directory_path() / "agent_cpp_instructions_test";
+    test_dir_ = fs::temp_directory_path() / "agent_sdk_instructions_test";
     fs::create_directories(test_dir_);
     // Create a .git directory to act as git root
     fs::create_directories(test_dir_ / ".git");
@@ -333,10 +333,10 @@ TEST_F(AgentInstructionsTest, FindClaudeMd) {
   EXPECT_TRUE(found);
 }
 
-TEST_F(AgentInstructionsTest, FindInAgentsCppDir) {
-  auto dir = test_dir_ / ".agent-cpp";
+TEST_F(AgentInstructionsTest, FindInAgentsSdkDir) {
+  auto dir = test_dir_ / ".agent-sdk";
   fs::create_directories(dir);
-  std::ofstream(dir / "AGENTS.md") << "# Agent-cpp Rules\n";
+  std::ofstream(dir / "AGENTS.md") << "# Agent-sdk Rules\n";
 
   auto results = config_paths::find_agent_instructions(test_dir_);
 

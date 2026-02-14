@@ -185,7 +185,7 @@ TruncateResult save_and_truncate(const std::string &text, const std::string &too
 
   if (truncated.truncated) {
     // Save full output to temp file
-    auto temp_dir = fs::temp_directory_path() / "agent-cpp" / "tool_outputs";
+    auto temp_dir = fs::temp_directory_path() / "agent-sdk" / "tool_outputs";
     fs::create_directories(temp_dir);
 
     auto filename = tool_name + "_" + UUID::short_id() + ".txt";

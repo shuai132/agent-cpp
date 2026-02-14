@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(agent-cpp VERSION 0.1.0 LANGUAGES CXX)
+project(agent-sdk VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -65,7 +65,7 @@ FetchContent_MakeAvailable(ftxui)
 find_package(OpenSSL REQUIRED)
 
 # Main library
-add_library(agent_core
+add_library(agent_sdk
         # Core types
         src/core/types.cpp
         src/core/message.cpp
@@ -117,11 +117,11 @@ add_library(agent_core
         src/tool/builtin/skill.cpp
 )
 
-target_include_directories(agent_core PUBLIC
+target_include_directories(agent_sdk PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(agent_core PUBLIC
+target_link_libraries(agent_sdk PUBLIC
         nlohmann_json::nlohmann_json
         asio
         spdlog::spdlog
@@ -131,26 +131,26 @@ target_link_libraries(agent_core PUBLIC
 
 # Platform-specific settings
 if (APPLE)
-    target_link_libraries(agent_core PUBLIC "-framework CoreFoundation" "-framework Security")
+    target_link_libraries(agent_sdk PUBLIC "-framework CoreFoundation" "-framework Security")
 endif ()
 
 if (UNIX AND NOT APPLE)
-    target_link_libraries(agent_core PUBLIC pthread)
+    target_link_libraries(agent_sdk PUBLIC pthread)
 endif ()
 
 # Examples
 if (AGENT_BUILD_EXAMPLES)
     add_executable(simple_chat examples/simple_chat.cpp)
-    target_link_libraries(simple_chat PRIVATE agent_core)
+    target_link_libraries(simple_chat PRIVATE agent_sdk)
 
     add_executable(api-test examples/api_test.cpp)
-    target_link_libraries(api-test PRIVATE agent_core)
+    target_link_libraries(api-test PRIVATE agent_sdk)
 
     add_executable(tool-test examples/tool_test.cpp)
-    target_link_libraries(tool-test PRIVATE agent_core)
+    target_link_libraries(tool-test PRIVATE agent_sdk)
 
     add_executable(agent_cli examples/agent_cli.cpp)
-    target_link_libraries(agent_cli PRIVATE agent_core ftxui::component)
+    target_link_libraries(agent_cli PRIVATE agent_sdk ftxui::component)
 endif ()
 
 # Tests
@@ -185,7 +185,7 @@ if (AGENT_BUILD_TESTS)
     )
 
     target_link_libraries(agent_tests PRIVATE
-            agent_core
+            agent_sdk
             GTest::gtest
     )
 

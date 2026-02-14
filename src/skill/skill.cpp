@@ -257,7 +257,7 @@ void SkillRegistry::discover(const fs::path &start_dir, const std::vector<fs::pa
 
   // Skill search directories within each traversed directory
   static constexpr const char *PROJECT_SKILL_DIRS[] = {
-      ".agent-cpp/skills",
+      ".agent-sdk/skills",
       ".agents/skills",
       ".claude/skills",
       ".opencode/skills",
@@ -283,7 +283,7 @@ void SkillRegistry::discover(const fs::path &start_dir, const std::vector<fs::pa
   // 2. Scan global paths
   auto home = config_paths::home_dir();
   std::vector<fs::path> global_skill_dirs = {
-      config_paths::config_dir() / "skills",     // ~/.config/agent-cpp/skills/
+      config_paths::config_dir() / "skills",     // ~/.config/agent-sdk/skills/
       home / ".agents" / "skills",               // ~/.agents/skills/
       home / ".claude" / "skills",               // ~/.claude/skills/
       home / ".config" / "opencode" / "skills",  // ~/.config/opencode/skills/

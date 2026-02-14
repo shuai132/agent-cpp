@@ -1,20 +1,19 @@
-# agent-cpp
+# agent-sdk
+
+agent sdk for cpp, like claude code sdk but lightweight.
 
 [中文](README.md) | English
-
-A lightweight AI Agent SDK implemented in C++. The core is an Agent Loop.
 
 ## Why Reimplement in C++?
 
 Existing AI Agent projects (Claude Code, OpenCode, OpenClaw, etc.) share two common issues:
 
-- **Feature-rich but high complexity**: These projects are excellent and fully featured, but for scenarios that only
-  require core Agent capabilities, the barrier to understanding and extending them is quite high
-- **Heavy runtime**: Almost all are built on Node.js / TypeScript — the plugin ecosystem is convenient, but the cost is
-  carrying an entire Node runtime, with packaged binaries easily approaching 100MB, making embedding into other projects
-  too expensive
+- **High complexity**: These projects are fully featured, but not suitable for scenarios that only require core Agent
+  capabilities, and are nearly impossible to decompose for secondary development.
+- **Heavy runtime**: Built on Node.js / TypeScript stack, dependent on the Node runtime, with packaged binaries
+  approaching 100MB, making embedding into other projects too expensive.
 
-agent-cpp chooses C++ precisely to address these pain points: the build output is a lightweight native static library
+agent-sdk chooses C++ precisely to address these pain points: the build output is a lightweight native static library
 with zero runtime dependencies, easily embeddable into any C/C++ project, and even capable of running in embedded
 environments.
 
@@ -22,7 +21,7 @@ environments.
 
 - **Keep it simple and easy to understand**: Clean code structure, modular design
 - **Include mainstream core features**: Similar to Claude Code / OpenCode core capabilities
-- **Use as a library/framework**: Provides a C++ static library `agent_core`, embeddable into other projects
+- **Use as a library/framework**: Provides a C++ static library `agent_sdk`, embeddable into other projects
 
 ## Architecture Overview
 
@@ -110,8 +109,8 @@ Supports per-tool permission policy configuration.
 
 Supports layered configuration, from highest to lowest priority:
 
-1. Project-level: `.agent-cpp/config.json`
-2. Global: `~/.config/agent-cpp/config.json`
+1. Project-level: `.agent-sdk/config.json`
+2. Global: `~/.config/agent-sdk/config.json`
 3. Instruction files: Hierarchical search for `AGENTS.md`, compatible with `CLAUDE.md`, `.agents/`, `.claude/`,
    `.opencode/` conventions
 
@@ -127,7 +126,7 @@ Model Context Protocol client, supporting:
 Compatible with the skill specifications of mainstream AI Agent tools such as OpenCode and Claude Code, enabling
 cross-tool skill sharing:
 
-- **Multi-convention compatible**: Automatically searches `.agent-cpp/`, `.agents/`, `.claude/`, `.opencode/`
+- **Multi-convention compatible**: Automatically searches `.agent-sdk/`, `.agents/`, `.claude/`, `.opencode/`
   directories for `SKILL.md`
 - **Hierarchical discovery**: Traverses from the project directory up to the git root, collecting all skills
 - **Global sharing**: Supports global directories like `~/.agents/skills/` for sharing skills across Agent tools
@@ -141,9 +140,10 @@ See [Skill System Design](doc/skill-system.md) for details.
 | Dependency                                         | Version | Purpose                 |
 |----------------------------------------------------|---------|-------------------------|
 | C++                                                | 20      | Language standard       |
-| [Asio](https://github.com/chriskohlhoff/asio)      | 1.30.2  | Async I/O & networking  |
+| [Asio](https://github.com/chriskohlhoff/asio)      | 1.36.0  | Async I/O & networking  |
 | [spdlog](https://github.com/gabime/spdlog)         | 1.13.0  | Logging                 |
-| [nlohmann/json](https://github.com/nlohmann/json)  | 3.11.3  | JSON parsing            |
+| [nlohmann/json](https://github.com/nlohmann/json)  | 3.12.0  | JSON parsing            |
+| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)   | 5.0.0   | TUI terminal interface  |
 | [OpenSSL](https://www.openssl.org/)                | —       | HTTPS / TLS             |
 | [GoogleTest](https://github.com/google/googletest) | 1.14.0  | Unit testing (optional) |
 
@@ -162,8 +162,8 @@ See [Skill System Design](doc/skill-system.md) for details.
 
 ```bash
 # Clone the project
-git clone https://github.com/shuai132/agent-cpp.git
-cd agent-cpp
+git clone https://github.com/shuai132/agent-sdk.git
+cd agent-sdk
 
 # Build
 mkdir build && cd build
@@ -248,7 +248,7 @@ int main() {
 ## Project Structure
 
 ```
-agent-cpp/
+agent-sdk/
 ├── CMakeLists.txt
 ├── README.md
 ├── src/

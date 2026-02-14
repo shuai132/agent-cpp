@@ -1,25 +1,24 @@
-# agent-cpp
+# agent-sdk
+
+agent sdk for cpp, like claude code sdk but lightweight.
 
 中文 | [English](README_EN.md)
-
-一个使用 C++ 实现的 AI Agent（智能体）SDK，核心部分是一个Agent Loop。
 
 ## 为什么用 C++ 重新实现？
 
 现有的 AI Agent 项目（Claude Code、OpenCode、OpenClaw 等）普遍存在两个问题：
 
-- **功能丰富但复杂度高**：这些项目都非常优秀且功能全面，但对于只需要核心 Agent 能力的场景来说，理解和二次开发的门槛较高
-- **运行时笨重**：几乎清一色基于 Node.js / TypeScript 构建——插件生态确实方便，但代价是必须携带整个 Node
-  运行时，打包后动辄近百兆，嵌入到项目的代价太大
+- **复杂度高**：这些项目功能全面，但对于只需要核心 Agent 能力的场景并不适合，几乎无法拆分做二次开发。
+- **运行时笨重**：基于Node.js、TypeScript技术栈，依赖Node运行时，打包后近百兆，嵌入到项目的代价太大。
 
-agent-cpp 选择 C++ 正是为了解决这些痛点：编译产物是一个轻量的原生静态库，零运行时依赖，可以轻松嵌入任何 C/C++
+agent-sdk 选择 C++ 正是为了解决这些痛点：编译产物是一个轻量的原生静态库，零运行时依赖，可以轻松嵌入任何 C/C++
 项目，甚至可以在嵌入式环境中运行。
 
 ## 项目目标
 
 - **保持简单，容易理解**：代码结构清晰，模块化设计
 - **包含主流基本功能**：类似 Claude Code / OpenCode 的核心能力
-- **作为库/框架使用**：提供 C++ 静态库 `agent_core`，可嵌入到其他项目
+- **作为库/框架使用**：提供 C++ 静态库 `agent_sdk`，可嵌入到其他项目
 
 ## 架构概览
 
@@ -107,8 +106,8 @@ agent-cpp 选择 C++ 正是为了解决这些痛点：编译产物是一个轻�
 
 支持分层配置，优先级由高到低：
 
-1. 项目级配置：`.agent-cpp/config.json`
-2. 全局配置：`~/.config/agent-cpp/config.json`
+1. 项目级配置：`.agent-sdk/config.json`
+2. 全局配置：`~/.config/agent-sdk/config.json`
 3. 指令文件：层级搜索 `AGENTS.md`，兼容 `CLAUDE.md`、`.agents/`、`.claude/`、`.opencode/` 等多种规范
 
 ### 🌐 MCP 支持（WIP）
@@ -122,7 +121,7 @@ Model Context Protocol 客户端，支持：
 
 兼容 OpenCode、Claude Code 等主流 AI Agent 工具的 Skill 规范，支持跨工具共享技能包：
 
-- **多规范兼容**：自动搜索 `.agent-cpp/`、`.agents/`、`.claude/`、`.opencode/` 目录下的 `SKILL.md`
+- **多规范兼容**：自动搜索 `.agent-sdk/`、`.agents/`、`.claude/`、`.opencode/` 目录下的 `SKILL.md`
 - **层级发现**：从项目目录向上遍历到 git 根目录，收集所有 skill
 - **全局共享**：支持 `~/.agents/skills/` 等全局目录，与其他 Agent 工具共享 skill
 - **按需加载**：LLM 通过内置 `skill` 工具按需加载，不浪费上下文窗口
@@ -135,9 +134,10 @@ Model Context Protocol 客户端，支持：
 | 依赖                                                 | 版本     | 用途          |
 |----------------------------------------------------|--------|-------------|
 | C++                                                | 20     | 语言标准        |
-| [Asio](https://github.com/chriskohlhoff/asio)      | 1.30.2 | 异步 I/O 与网络  |
+| [Asio](https://github.com/chriskohlhoff/asio)      | 1.36.0 | 异步 I/O 与网络  |
 | [spdlog](https://github.com/gabime/spdlog)         | 1.13.0 | 日志          |
-| [nlohmann/json](https://github.com/nlohmann/json)  | 3.11.3 | JSON 解析     |
+| [nlohmann/json](https://github.com/nlohmann/json)  | 3.12.0 | JSON 解析     |
+| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)   | 5.0.0  | TUI 终端界面    |
 | [OpenSSL](https://www.openssl.org/)                | —      | HTTPS / TLS |
 | [GoogleTest](https://github.com/google/googletest) | 1.14.0 | 单元测试（可选）    |
 
@@ -155,8 +155,8 @@ Model Context Protocol 客户端，支持：
 
 ```bash
 # 克隆项目
-git clone https://github.com/shuai132/agent-cpp.git
-cd agent-cpp
+git clone https://github.com/shuai132/agent-sdk.git
+cd agent-sdk
 
 # 构建
 mkdir build && cd build
@@ -241,7 +241,7 @@ int main() {
 ## 项目结构
 
 ```
-agent-cpp/
+agent-sdk/
 ├── CMakeLists.txt
 ├── README.md
 ├── src/
