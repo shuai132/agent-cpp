@@ -4,8 +4,8 @@
 #include <mutex>
 #include <vector>
 
-#include "core/message.hpp"
-#include "core/types.hpp"
+#include "message.hpp"
+#include "types.hpp"
 
 namespace agent {
 

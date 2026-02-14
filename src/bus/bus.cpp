@@ -1,4 +1,4 @@
-#include "bus/bus.hpp"
+#include "bus.hpp"
 
 namespace agent {
 

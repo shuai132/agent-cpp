@@ -1,4 +1,4 @@
-#include "net/sse_client.hpp"
+#include "sse_client.hpp"
 
 #include <regex>
 #include <sstream>

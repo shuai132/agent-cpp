@@ -1,6 +1,6 @@
 // Tool registry initialization - delegates to tools::register_builtins() in tool/builtin/bash.cpp
-#include "tool/builtin/builtins.hpp"
-#include "tool/tool.hpp"
+#include "builtin/builtins.hpp"
+#include "tool.hpp"
 
 namespace agent {
 

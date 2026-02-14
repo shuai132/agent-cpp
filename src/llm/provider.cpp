@@ -1,4 +1,4 @@
-#include "llm/provider.hpp"
+#include "provider.hpp"
 
 #include "llm/anthropic.hpp"
 #include "llm/openai.hpp"

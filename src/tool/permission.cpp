@@ -1,4 +1,4 @@
-#include "tool/permission.hpp"
+#include "permission.hpp"
 
 #include <algorithm>
 

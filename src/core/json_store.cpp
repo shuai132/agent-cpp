@@ -1,4 +1,4 @@
-#include "core/json_store.hpp"
+#include "json_store.hpp"
 
 #include <spdlog/spdlog.h>
 

@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "tool/builtin/builtins.hpp"
+#include "builtins.hpp"
 
 namespace agent::tools {
 

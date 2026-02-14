@@ -5,7 +5,7 @@
 #include <sstream>
 #include <thread>
 
-#include "tool/builtin/builtins.hpp"
+#include "builtins.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

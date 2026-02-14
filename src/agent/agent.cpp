@@ -1,5 +1,5 @@
 // Agent initialization
-#include "agent/agent.hpp"
+#include "agent.hpp"
 
 #include <filesystem>
 

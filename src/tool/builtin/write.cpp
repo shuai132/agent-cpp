@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "tool/builtin/builtins.hpp"
+#include "builtins.hpp"
 
 namespace agent::tools {
 

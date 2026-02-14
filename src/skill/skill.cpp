@@ -1,4 +1,4 @@
-#include "skill/skill.hpp"
+#include "skill.hpp"
 
 #include <spdlog/spdlog.h>
 

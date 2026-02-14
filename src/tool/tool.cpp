@@ -1,4 +1,4 @@
-#include "tool/tool.hpp"
+#include "tool.hpp"
 
 #include <filesystem>
 #include <fstream>

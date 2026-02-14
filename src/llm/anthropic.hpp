@@ -1,8 +1,8 @@
 #pragma once
 
-#include "llm/provider.hpp"
 #include "net/http_client.hpp"
 #include "net/sse_client.hpp"
+#include "provider.hpp"
 
 namespace agent::llm {
 

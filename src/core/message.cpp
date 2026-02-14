@@ -1,4 +1,4 @@
-#include "core/message.hpp"
+#include "message.hpp"
 
 #include <algorithm>
 

@@ -10,8 +10,8 @@
 #include <variant>
 #include <vector>
 
-#include "core/types.hpp"
-#include "core/uuid.hpp"
+#include "types.hpp"
+#include "uuid.hpp"
 
 namespace agent {
 

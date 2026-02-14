@@ -1,3 +1,3 @@
-#include "core/uuid.hpp"
+#include "uuid.hpp"
 
 // UUID implementation is header-only

@@ -10,8 +10,8 @@
 
 #include "core/config.hpp"
 #include "core/types.hpp"
-#include "mcp/transport.hpp"
 #include "tool/tool.hpp"
+#include "transport.hpp"
 
 namespace agent::mcp {
 
