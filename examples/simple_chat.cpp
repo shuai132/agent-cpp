@@ -128,6 +128,18 @@ static void print_history(const std::shared_ptr<Session>& session) {
   std::cout << "----------------------------\n\n";
 }
 
+// Helper: print help message
+static void print_help() {
+  std::cout << "\n--- Available Commands ---\n";
+  std::cout << "  /help, /h        — Show this help message\n";
+  std::cout << "  /s               — List saved sessions\n";
+  std::cout << "  /s <N>           — Load session by number\n";
+  std::cout << "  /s save          — Save current session\n";
+  std::cout << "  /s d [N]         — Delete session (interactive or by number)\n";
+  std::cout << "  quit, exit       — Exit the program\n";
+  std::cout << "--------------------------\n\n";
+}
+
 // Helper: delete session by index or interactively
 static void handle_delete_command(const std::string& arg, asio::io_context& io_ctx, Config& config, std::shared_ptr<JsonMessageStore>& store,
                                   std::shared_ptr<Session>& session) {
@@ -344,7 +356,7 @@ int main(int argc, char* argv[]) {
   // Chat loop
   std::string input;
   std::cout << "Enter your message (or 'quit' to exit):\n";
-  std::cout << "Commands: /s — list sessions, /s <N> — load, /s d [N] — delete, /s save — save\n\n";
+  std::cout << "Commands: /help — show help, /s — sessions management\n\n";
 
   while (true) {
     std::cout << "> ";
@@ -355,6 +367,12 @@ int main(int argc, char* argv[]) {
     }
 
     if (input.empty()) {
+      continue;
+    }
+
+    // Handle /help and /h commands
+    if (input == "/help" || input == "/h") {
+      print_help();
       continue;
     }
 
