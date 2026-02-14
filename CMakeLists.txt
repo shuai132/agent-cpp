@@ -11,12 +11,15 @@ option(AGENT_BUILD_EXAMPLES "Build examples" ON)
 
 # Dependencies
 include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
 
 # nlohmann/json
 FetchContent_Declare(
         json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG v3.11.3
+        GIT_TAG v3.12.0
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(json)
 
@@ -24,7 +27,9 @@ FetchContent_MakeAvailable(json)
 FetchContent_Declare(
         asio
         GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-        GIT_TAG asio-1-30-2
+        GIT_TAG asio-1-36-0
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(asio)
 
@@ -38,6 +43,8 @@ FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog.git
         GIT_TAG v1.13.0
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(spdlog)
 
@@ -137,6 +144,8 @@ if (AGENT_BUILD_TESTS)
             googletest
             GIT_REPOSITORY https://github.com/google/googletest.git
             GIT_TAG v1.14.0
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(googletest)
 

@@ -349,7 +349,7 @@ int main(int argc, char* argv[]) {
 
   // Run IO context in background thread
   std::thread io_thread([&io_ctx]() {
-    asio::io_context::work work(io_ctx);
+    auto work = asio::make_work_guard(io_ctx);
     io_ctx.run();
   });
 

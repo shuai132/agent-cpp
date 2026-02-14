@@ -72,7 +72,7 @@ int main() {
   // Run IO context in background
   std::atomic<bool> done{false};
   std::thread io_thread([&io_ctx, &done]() {
-    asio::io_context::work work(io_ctx);
+    auto work = asio::make_work_guard(io_ctx);
     while (!done) {
       io_ctx.run_for(std::chrono::milliseconds(100));
     }
