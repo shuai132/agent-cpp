@@ -138,6 +138,7 @@ const std::vector<CommandDef>& command_defs() {
       {"/compact", "", "压缩上下文", CommandType::Compact},
       {"/expand", "", "展开所有工具调用", CommandType::Expand},
       {"/collapse", "", "折叠所有工具调用", CommandType::Collapse},
+      {"/copy", "/c", "复制聊天内容到剪贴板", CommandType::Copy},
   };
   return defs;
 }
@@ -171,6 +172,7 @@ ParsedCommand parse_command(const std::string& input) {
   if (cmd == "/compact") return {CommandType::Compact, arg};
   if (cmd == "/expand") return {CommandType::Expand, arg};
   if (cmd == "/collapse") return {CommandType::Collapse, arg};
+  if (cmd == "/c" || cmd == "/copy") return {CommandType::Copy, arg};
   return {CommandType::Unknown, cmd};
 }
 

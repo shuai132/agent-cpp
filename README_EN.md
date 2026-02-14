@@ -251,6 +251,75 @@ int main() {
 }
 ```
 
+## TUI Terminal Interface (agent_cli)
+
+agent-sdk provides a full-featured TUI (Terminal User Interface) application `agent_cli`, built with [FTXUI](https://github.com/ArthurSonzogni/FTXUI).
+
+### Running
+
+```bash
+# Set API Key
+export ANTHROPIC_API_KEY="your-key"
+# or
+export OPENAI_API_KEY="your-key"
+
+# Run TUI
+./build/agent_cli
+```
+
+### Features
+
+- ✅ **Real-time streaming**: LLM responses display in real-time
+- ✅ **Tool call visualization**: Tool cards with click-to-expand/collapse details
+- ✅ **Command completion**: Type `/` for automatic command menu
+- ✅ **Session management**: Create, switch, and delete sessions
+- ✅ **Scrolling**: Mouse wheel and PageUp/PageDown support
+- ✅ **Mode switching**: Quick toggle between Build/Plan modes (Tab key)
+- ✅ **Copy chat**: One-click copy chat content to clipboard
+
+### Interactions
+
+#### Keyboard Shortcuts
+
+| Shortcut       | Function                    |
+|----------------|-----------------------------|
+| `Tab`          | Switch Build/Plan mode      |
+| `Esc`          | Interrupt running agent     |
+| `Ctrl+C`       | Press twice to exit         |
+| `PageUp/Down`  | Scroll chat history         |
+| `↑/↓`          | Navigate command menu       |
+
+#### Mouse Interactions
+
+| Action              | Function                           |
+|---------------------|------------------------------------|
+| Click tool card     | Expand/collapse tool call details  |
+| Scroll wheel        | Scroll chat history                |
+| Click session item  | Select session (in session panel)  |
+
+#### Commands
+
+| Command         | Shortcut | Function                    |
+|-----------------|----------|-----------------------------|
+| `/quit`         | `/q`     | Exit program                |
+| `/clear`        | -        | Clear chat history          |
+| `/help`         | `/h`     | Show help                   |
+| `/sessions`     | `/s`     | Open session list panel     |
+| `/expand`       | -        | Expand all tool calls       |
+| `/collapse`     | -        | Collapse all tool calls     |
+| `/copy`         | `/c`     | Copy chat to clipboard      |
+| `/compact`      | -        | Trigger context compaction  |
+
+### Session Management
+
+In the session list panel (open with `/sessions`):
+
+- `↑/↓` or `j/k`: Navigate
+- `Enter`: Load selected session
+- `d`: Delete selected session
+- `n`: Create new session
+- `Esc`: Close panel
+
 ## Project Structure
 
 ```
@@ -282,7 +351,7 @@ agent-sdk/
 
 ## TODO
 
-- [ ] TUI support
+- [x] TUI support
 - [x] Skill system
 - [ ] Session persistence
 - [ ] REST API for server mode

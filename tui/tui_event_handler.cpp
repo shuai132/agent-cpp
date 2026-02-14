@@ -2,10 +2,11 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
+#include <ftxui/component/component.hpp>
+#include <sstream>
 #include <string>
 #include <thread>
-
-#include <ftxui/component/component.hpp>
 
 #include "agent/agent.hpp"
 #include "tui_callbacks.h"
@@ -60,6 +61,9 @@ void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) 
       h += "  Ctrl+C                Press twice to exit\n";
       h += "  Tab                   Switch build/plan mode\n";
       h += "  PageUp / PageDown     Scroll chat history\n";
+      h += "\nMouse Interactions:\n\n";
+      h += "  Click on tool card    Expand/collapse tool details\n";
+      h += "  Scroll wheel          Scroll chat history\n";
       state.chat_log.push({EntryKind::SystemInfo, h, ""});
       state.input_text.clear();
       return;
@@ -83,6 +87,81 @@ void handle_submit(AppState& state, AppContext& ctx, ScreenInteractive& screen) 
       state.chat_log.push({EntryKind::SystemInfo, "All tool calls collapsed", ""});
       state.input_text.clear();
       return;
+
+    case CommandType::Copy: {
+      // 生成纯文本格式的聊天内容
+      auto entries = state.chat_log.snapshot();
+      std::ostringstream oss;
+
+      for (const auto& e : entries) {
+        switch (e.kind) {
+          case EntryKind::UserMsg:
+            oss << "User:\n" << e.text << "\n\n";
+            break;
+          case EntryKind::AssistantText:
+            oss << "AI:\n" << e.text << "\n\n";
+            break;
+          case EntryKind::ToolCall:
+            oss << "Tool Call: " << e.text << "\n";
+            if (!e.detail.empty()) {
+              oss << "Arguments:\n" << e.detail << "\n";
+            }
+            break;
+          case EntryKind::ToolResult:
+            oss << "Tool Result:\n" << e.detail << "\n\n";
+            break;
+          case EntryKind::SubtaskStart:
+            oss << "Subtask: " << e.text << "\n";
+            break;
+          case EntryKind::SubtaskEnd:
+            oss << "Subtask Done: " << e.text << "\n";
+            break;
+          case EntryKind::Error:
+            oss << "Error: " << e.text << "\n\n";
+            break;
+          case EntryKind::SystemInfo:
+            oss << "System: " << e.text << "\n\n";
+            break;
+        }
+      }
+
+      std::string content = oss.str();
+
+      // 使用系统命令复制到剪贴板
+      // macOS: pbcopy, Linux: xclip or xsel, Windows: clip
+      std::string copy_cmd;
+#ifdef __APPLE__
+      copy_cmd = "pbcopy";
+#elif defined(_WIN32)
+      copy_cmd = "clip";
+#else
+      // Linux: 尝试 xclip，如果不存在则尝试 xsel
+      if (system("which xclip >/dev/null 2>&1") == 0) {
+        copy_cmd = "xclip -selection clipboard";
+      } else if (system("which xsel >/dev/null 2>&1") == 0) {
+        copy_cmd = "xsel --clipboard --input";
+      } else {
+        state.chat_log.push({EntryKind::Error, "No clipboard utility found. Install xclip or xsel.", ""});
+        state.input_text.clear();
+        return;
+      }
+#endif
+
+      FILE* pipe = popen(copy_cmd.c_str(), "w");
+      if (pipe) {
+        fwrite(content.c_str(), 1, content.size(), pipe);
+        int result = pclose(pipe);
+        if (result == 0) {
+          state.chat_log.push({EntryKind::SystemInfo, "Chat content copied to clipboard (" + std::to_string(content.size()) + " bytes)", ""});
+        } else {
+          state.chat_log.push({EntryKind::Error, "Failed to copy to clipboard", ""});
+        }
+      } else {
+        state.chat_log.push({EntryKind::Error, "Failed to open clipboard utility", ""});
+      }
+      state.input_text.clear();
+      return;
+    }
 
     case CommandType::Sessions:
       handle_sessions_command(state, ctx, cmd.arg);
@@ -395,6 +474,24 @@ bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& scre
   // 鼠标滚轮
   if (event.is_mouse()) {
     auto& mouse = event.mouse();
+
+    // 处理工具框点击（切换展开/折叠）
+    if (mouse.button == Mouse::Left && mouse.motion == Mouse::Pressed) {
+      // 检查是否点击了某个工具框
+      for (size_t box_idx = 0; box_idx < state.tool_boxes.size(); ++box_idx) {
+        if (state.tool_boxes[box_idx].Contain(mouse.x, mouse.y)) {
+          // 找到对应的 entry 索引
+          if (box_idx < state.tool_entry_indices.size()) {
+            size_t entry_idx = state.tool_entry_indices[box_idx];
+            // 切换展开状态
+            state.tool_expanded[entry_idx] = !state.tool_expanded[entry_idx];
+            return true;
+          }
+        }
+      }
+      return false;  // 点击了其他地方，让默认行为处理
+    }
+
     if (mouse.button == Mouse::WheelUp) {
       state.scroll_y = std::max(0.0f, state.scroll_y - 0.05f);
       state.auto_scroll = false;

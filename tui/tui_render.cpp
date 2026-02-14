@@ -1,10 +1,9 @@
 #include "tui_render.h"
 
 #include <filesystem>
+#include <ftxui/screen/color.hpp>
 #include <string>
 #include <vector>
-
-#include <ftxui/screen/color.hpp>
 
 namespace agent_cli {
 
@@ -147,9 +146,22 @@ Element build_chat_view(AppState& state) {
     state.scroll_y = 1.0f;
   }
 
+  // 先统计有多少个 ToolCall，预分配边界框
+  size_t tool_count = 0;
+  for (size_t i = 0; i < entries.size(); ++i) {
+    if (entries[i].kind == EntryKind::ToolCall) {
+      tool_count++;
+    }
+  }
+  state.tool_boxes.clear();
+  state.tool_boxes.resize(tool_count);
+  state.tool_entry_indices.clear();
+  state.tool_entry_indices.reserve(tool_count);
+
   Elements chat_elements;
   chat_elements.push_back(text(""));
 
+  size_t tool_box_idx = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
     const auto& e = entries[i];
 
@@ -161,7 +173,15 @@ Element build_chat_view(AppState& state) {
         group.has_result = true;
       }
       bool expanded = state.tool_expanded.count(i) && state.tool_expanded[i];
-      chat_elements.push_back(render_tool_group(group, expanded));
+
+      // 使用 reflect 捕获边界框，同时存储原始索引
+      if (tool_box_idx < state.tool_boxes.size()) {
+        state.tool_entry_indices.push_back(i);  // 记录此工具框对应的 entry 索引
+        chat_elements.push_back(render_tool_group(group, expanded) | reflect(state.tool_boxes[tool_box_idx]));
+        tool_box_idx++;
+      } else {
+        chat_elements.push_back(render_tool_group(group, expanded));
+      }
       continue;
     }
 
@@ -181,10 +201,10 @@ Element build_chat_view(AppState& state) {
 
   chat_elements.push_back(text(""));
 
-  return vbox(chat_elements)                            //
-         | focusPositionRelative(0.f, state.scroll_y)   //
-         | vscroll_indicator                            //
-         | yframe                                       //
+  return vbox(chat_elements)                           //
+         | focusPositionRelative(0.f, state.scroll_y)  //
+         | vscroll_indicator                           //
+         | yframe                                      //
          | flex;
 }
 

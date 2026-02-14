@@ -92,6 +92,7 @@ enum class CommandType {
   Compact,   // /compact
   Expand,    // /expand — 展开所有工具调用
   Collapse,  // /collapse — 折叠所有工具调用
+  Copy,      // /copy — 复制聊天内容到剪贴板
   Unknown,   // 无法识别的 / 命令
 };
 

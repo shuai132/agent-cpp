@@ -3,15 +3,14 @@
 // tui_state.h — TUI 应用的全局状态和上下文
 // 包含所有 UI 状态变量，由 main 持有，各模块通过引用访问
 
+#include <asio.hpp>
 #include <chrono>
+#include <ftxui/screen/box.hpp>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <asio.hpp>
-#include <ftxui/screen/box.hpp>
 
 #include "agent/agent.hpp"
 #include "tui_components.h"
@@ -43,7 +42,9 @@ struct AppState {
   std::chrono::steady_clock::time_point ctrl_c_time;
 
   // ----- 工具调用展开状态 -----
-  std::map<size_t, bool> tool_expanded;  // key = ToolCall 在 snapshot 中的 index
+  std::map<size_t, bool> tool_expanded;    // key = ToolCall 在 snapshot 中的 index
+  std::vector<ftxui::Box> tool_boxes;      // 工具框的屏幕坐标（用于鼠标点击检测）
+  std::vector<size_t> tool_entry_indices;  // 工具框对应的 entry 索引（tool_boxes[i] 对应 entries[tool_entry_indices[i]]）
 
   // ----- 会话列表面板 -----
   bool show_sessions_panel = false;
