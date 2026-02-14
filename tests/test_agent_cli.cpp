@@ -476,6 +476,33 @@ TEST(AgentStateTest, ThreadSafety) {
   SUCCEED();
 }
 
+TEST(AgentStateTest, ModeToggle) {
+  AgentState state;
+  EXPECT_EQ(state.mode(), AgentMode::Build);
+
+  state.toggle_mode();
+  EXPECT_EQ(state.mode(), AgentMode::Plan);
+
+  state.toggle_mode();
+  EXPECT_EQ(state.mode(), AgentMode::Build);
+}
+
+TEST(AgentStateTest, Activity) {
+  AgentState state;
+  EXPECT_TRUE(state.activity().empty());
+
+  state.set_activity("Running bash...");
+  EXPECT_EQ(state.activity(), "Running bash...");
+
+  state.set_activity("");
+  EXPECT_TRUE(state.activity().empty());
+}
+
+TEST(AgentModeTest, ToString) {
+  EXPECT_EQ(to_string(AgentMode::Build), "build");
+  EXPECT_EQ(to_string(AgentMode::Plan), "plan");
+}
+
 // ============================================================
 // EntryKind to_string 测试
 // ============================================================

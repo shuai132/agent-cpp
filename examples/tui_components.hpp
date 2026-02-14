@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -248,7 +249,6 @@ inline ParsedCommand parse_command(const std::string& input) {
   if (cmd == "/compact") return {CommandType::Compact, arg};
   if (cmd == "/expand") return {CommandType::Expand, arg};
   if (cmd == "/collapse") return {CommandType::Collapse, arg};
-
   return {CommandType::Unknown, cmd};
 }
 
@@ -272,6 +272,16 @@ inline std::vector<std::string> split_lines(const std::string& text) {
   return lines;
 }
 
+// 格式化时间戳
+inline std::string format_time(const std::chrono::system_clock::time_point& ts) {
+  auto time_t = std::chrono::system_clock::to_time_t(ts);
+  std::tm tm{};
+  localtime_r(&time_t, &tm);
+  char buf[64];
+  std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
+  return buf;
+}
+
 // 格式化 token 数量为可读字符串
 inline std::string format_tokens(int64_t tokens) {
   if (tokens < 1000) return std::to_string(tokens);
@@ -290,6 +300,25 @@ inline std::string format_tokens(int64_t tokens) {
 // ============================================================
 // Agent 状态管理
 // ============================================================
+
+// ============================================================
+// Agent 模式
+// ============================================================
+
+enum class AgentMode {
+  Build,
+  Plan,
+};
+
+inline std::string to_string(AgentMode mode) {
+  switch (mode) {
+    case AgentMode::Build:
+      return "build";
+    case AgentMode::Plan:
+      return "plan";
+  }
+  return "build";
+}
 
 class AgentState {
  public:
@@ -329,6 +358,28 @@ class AgentState {
     return output_tokens_.load();
   }
 
+  // 活动状态消息（替代 spinner 进度条）
+  void set_activity(const std::string& msg) {
+    std::lock_guard<std::mutex> lock(mu_);
+    activity_ = msg;
+  }
+  std::string activity() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return activity_;
+  }
+
+  // 模式切换
+  void set_mode(AgentMode mode) {
+    mode_.store(static_cast<int>(mode));
+  }
+  AgentMode mode() const {
+    return static_cast<AgentMode>(mode_.load());
+  }
+  void toggle_mode() {
+    auto current = mode();
+    set_mode(current == AgentMode::Build ? AgentMode::Plan : AgentMode::Build);
+  }
+
   std::string status_text() const {
     std::string s = "Model: " + model();
     s += " | Tokens: " + format_tokens(input_tokens()) + "in/" + format_tokens(output_tokens()) + "out";
@@ -340,9 +391,11 @@ class AgentState {
   std::atomic<bool> running_{false};
   std::atomic<int64_t> input_tokens_{0};
   std::atomic<int64_t> output_tokens_{0};
+  std::atomic<int> mode_{static_cast<int>(AgentMode::Build)};
   mutable std::mutex mu_;
   std::string model_;
   std::string session_id_;
+  std::string activity_;
 };
 
 }  // namespace agent_cli
