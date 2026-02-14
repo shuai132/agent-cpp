@@ -4,6 +4,10 @@ agent sdk for cpp, like claude code sdk but lightweight.
 
 [中文](README.md) | English
 
+## agent_cli
+
+![agent_cli.png](doc/img/agent_cli.png)
+
 ## Why Implement in C++?
 
 Existing AI Agent projects (Claude Code, OpenCode, OpenClaw, etc.) share two common issues:
@@ -147,9 +151,9 @@ See [Skill System Design](doc/skill-system.md) for details.
 |----------------------------------------------------|---------|-------------------------|
 | C++                                                | 20      | Language standard       |
 | [Asio](https://github.com/chriskohlhoff/asio)      | 1.36.0  | Async I/O & networking  |
-| [spdlog](https://github.com/gabime/spdlog)         | 1.13.0  | Logging                 |
+| [spdlog](https://github.com/gabime/spdlog)         | 1.17.0  | Logging                 |
 | [nlohmann/json](https://github.com/nlohmann/json)  | 3.12.0  | JSON parsing            |
-| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)   | 5.0.0   | TUI terminal interface  |
+| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)   | 6.1.9   | TUI terminal interface  |
 | [OpenSSL](https://www.openssl.org/)                | —       | HTTPS / TLS             |
 | [GoogleTest](https://github.com/google/googletest) | 1.14.0  | Unit testing (optional) |
 

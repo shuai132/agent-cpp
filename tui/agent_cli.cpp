@@ -142,9 +142,9 @@ int main(int argc, char* argv[]) {
     auto input_area = vbox({
         cmd_menu_element,
         file_path_menu_element,
-        separatorHeavy() | dim,
+        separator() | dim,
         input_with_prompt->Render(),
-        separatorHeavy() | dim,
+        separator() | dim,
         hbox({text(" " + mode_str + " ") | dim, text("  tab to switch mode") | dim, filler()}),
     });
 

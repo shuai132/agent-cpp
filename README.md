@@ -4,6 +4,10 @@ agent sdk for cpp, like claude code sdk but lightweight.
 
 中文 | [English](README_EN.md)
 
+## agent_cli
+
+![agent_cli.png](doc/img/agent_cli.png)
+
 ## 为什么用 C++ 实现？
 
 现有的 AI Agent 项目（Claude Code、OpenCode、OpenClaw 等）普遍存在两个问题：
@@ -141,9 +145,9 @@ Model Context Protocol 客户端，支持：
 |----------------------------------------------------|--------|-------------|
 | C++                                                | 20     | 语言标准        |
 | [Asio](https://github.com/chriskohlhoff/asio)      | 1.36.0 | 异步 I/O 与网络  |
-| [spdlog](https://github.com/gabime/spdlog)         | 1.13.0 | 日志          |
+| [spdlog](https://github.com/gabime/spdlog)         | 1.17.0 | 日志          |
 | [nlohmann/json](https://github.com/nlohmann/json)  | 3.12.0 | JSON 解析     |
-| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)   | 5.0.0  | TUI 终端界面    |
+| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)   | 6.1.9  | TUI 终端界面    |
 | [OpenSSL](https://www.openssl.org/)                | —      | HTTPS / TLS |
 | [GoogleTest](https://github.com/google/googletest) | 1.14.0 | 单元测试（可选）    |
 
