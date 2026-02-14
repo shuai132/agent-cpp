@@ -20,6 +20,9 @@ void handle_sessions_command(AppState& state, AppContext& ctx, const std::string
 // 会话面板事件处理
 bool handle_sessions_panel_event(AppState& state, AppContext& ctx, ftxui::Event event);
 
+// Question 面板事件处理
+bool handle_question_panel_event(AppState& state, AppContext& ctx, ftxui::Event event);
+
 // 主事件处理
 bool handle_main_event(AppState& state, AppContext& ctx, ftxui::ScreenInteractive& screen, ftxui::Event event);
 

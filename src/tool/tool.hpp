@@ -18,6 +18,17 @@ namespace agent {
 // Forward declaration
 class Session;
 
+// Question info for question_handler
+struct QuestionInfo {
+  std::vector<std::string> questions;
+};
+
+// Question response from user
+struct QuestionResponse {
+  std::vector<std::string> answers;
+  bool cancelled = false;
+};
+
 // Tool execution context
 struct ToolContext {
   SessionId session_id;
@@ -35,6 +46,9 @@ struct ToolContext {
 
   // Create child session callback (for Task tool)
   std::function<std::shared_ptr<Session>(AgentType)> create_child_session;
+
+  // Question handler callback (for Question tool)
+  std::function<std::future<QuestionResponse>(const QuestionInfo &info)> question_handler;
 };
 
 // Tool execution result

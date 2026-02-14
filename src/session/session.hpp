@@ -13,6 +13,7 @@
 #include "core/message.hpp"
 #include "core/types.hpp"
 #include "llm/provider.hpp"
+#include "tool/tool.hpp"
 
 namespace agent {
 
@@ -133,6 +134,13 @@ class Session : public std::enable_shared_from_this<Session> {
     permission_handler_ = std::move(handler);
   }
 
+  // Question handling (for Question tool)
+  using QuestionHandler = std::function<std::future<QuestionResponse>(const QuestionInfo &info)>;
+
+  void set_question_handler(QuestionHandler handler) {
+    question_handler_ = std::move(handler);
+  }
+
  private:
   Session(asio::io_context &io_ctx, const Config &config, AgentType agent_type, std::shared_ptr<MessageStore> store);
 
@@ -187,6 +195,7 @@ class Session : public std::enable_shared_from_this<Session> {
   OnCompleteCallback on_complete_;
   OnErrorCallback on_error_;
   PermissionHandler permission_handler_;
+  QuestionHandler question_handler_;
 
   // Doom loop tracking
   struct ToolCallRecord {

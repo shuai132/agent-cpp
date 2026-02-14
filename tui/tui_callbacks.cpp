@@ -1,5 +1,6 @@
 #include "tui_callbacks.h"
 
+#include <future>
 #include <string>
 
 #include "tui_components.h"
@@ -54,6 +55,28 @@ void setup_tui_callbacks(AppState& state, AppContext& ctx) {
     std::promise<bool> p;
     p.set_value(true);
     return p.get_future();
+  });
+
+  // Question handler for interactive question tool
+  session->set_question_handler([&state, refresh_fn](const agent::QuestionInfo& info) {
+    // Set up the question panel state
+    state.question_list = info.questions;
+    state.question_answers.clear();
+    state.question_answers.resize(info.questions.size());
+    state.question_current_index = 0;
+    state.question_input_text.clear();
+
+    // Create a promise/future pair for async response
+    state.question_promise = std::make_shared<std::promise<agent::QuestionResponse>>();
+    auto future = state.question_promise->get_future();
+
+    // Show the panel
+    state.show_question_panel = true;
+    state.agent_state.set_activity("Waiting for your answer...");
+    refresh_fn();
+
+    // The future will be fulfilled when the user submits answers in the TUI event handler
+    return future;
   });
 }
 

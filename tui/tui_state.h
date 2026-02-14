@@ -52,9 +52,18 @@ struct AppState {
   std::vector<agent::SessionMeta> sessions_cache;
   std::vector<ftxui::Box> session_item_boxes;
 
+  // ----- Question 面板（用于 question 工具交互） -----
+  bool show_question_panel = false;
+  std::vector<std::string> question_list;                                   // 当前要问的问题列表
+  std::vector<std::string> question_answers;                                // 用户输入的答案
+  int question_current_index = 0;                                           // 当前正在回答的问题索引
+  std::string question_input_text;                                          // 当前答案输入框的文字
+  std::shared_ptr<std::promise<agent::QuestionResponse>> question_promise;  // 用于返回答案的 promise
+
   // ----- 便捷方法 -----
   void reset_view();
   void clear_all();
+  void reset_question_panel();  // 重置 question 面板状态
 };
 
 // TUI 应用的外部依赖/上下文（生命周期由 main 管理）

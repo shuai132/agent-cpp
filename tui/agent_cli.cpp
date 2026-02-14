@@ -1,13 +1,12 @@
-#include <iostream>
-#include <string>
-#include <thread>
-
 #include <asio.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/event.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/color.hpp>
+#include <iostream>
+#include <string>
+#include <thread>
 
 #include "agent/agent.hpp"
 #include "core/version.hpp"
@@ -72,7 +71,9 @@ int main(int argc, char* argv[]) {
   state.agent_state.set_model(config.default_model);
   state.agent_state.set_session_id(session->id());
 
-  AppContext ctx{io_ctx, config, store, session, [&screen]() { screen.Post(Event::Custom); }};
+  AppContext ctx{io_ctx, config, store, session, [&screen]() {
+                   screen.Post(Event::Custom);
+                 }};
 
   setup_tui_callbacks(state, ctx);
 
@@ -95,7 +96,9 @@ int main(int argc, char* argv[]) {
       state.show_cmd_menu = false;
     }
   };
-  input_option.on_enter = [&] { handle_submit(state, ctx, screen); };
+  input_option.on_enter = [&] {
+    handle_submit(state, ctx, screen);
+  };
   auto input_component = Input(&state.input_text, "输入您的消息或 @ 文件路径", input_option);
 
   auto input_with_prompt = Renderer(input_component, [&] {
@@ -120,6 +123,16 @@ int main(int argc, char* argv[]) {
         hbox({text(" " + mode_str + " ") | dim, text("  tab to switch mode") | dim, filler()}),
     });
 
+    // Question 面板（优先级最高）
+    if (state.show_question_panel) {
+      auto question_panel = build_question_panel(state);
+      return vbox({
+          status_bar,
+          separator() | dim,
+          question_panel | flex,
+      });
+    }
+
     if (state.show_sessions_panel) {
       auto sessions_panel = build_sessions_panel(state);
       return vbox({
@@ -139,7 +152,9 @@ int main(int argc, char* argv[]) {
   });
 
   // ===== 事件处理 =====
-  auto component = CatchEvent(final_renderer, [&](Event event) { return handle_main_event(state, ctx, screen, event); });
+  auto component = CatchEvent(final_renderer, [&](Event event) {
+    return handle_main_event(state, ctx, screen, event);
+  });
 
   // ===== 欢迎消息 =====
   state.chat_log.push(

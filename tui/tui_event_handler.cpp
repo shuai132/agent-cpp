@@ -371,10 +371,112 @@ bool handle_sessions_panel_event(AppState& state, AppContext& ctx, Event event) 
 }
 
 // ============================================================
+// Question 面板事件处理
+// ============================================================
+
+bool handle_question_panel_event(AppState& state, AppContext& ctx, Event event) {
+  // Esc: 取消问答
+  if (event == Event::Escape) {
+    if (state.question_promise) {
+      agent::QuestionResponse response;
+      response.cancelled = true;
+      state.question_promise->set_value(response);
+    }
+    state.reset_question_panel();
+    state.agent_state.set_activity("Thinking...");
+    ctx.refresh_fn();
+    return true;
+  }
+
+  // Enter: 提交当前答案
+  if (event == Event::Return) {
+    // 保存当前答案
+    if (state.question_current_index < static_cast<int>(state.question_answers.size())) {
+      state.question_answers[state.question_current_index] = state.question_input_text;
+    }
+
+    // 移动到下一个问题
+    state.question_current_index++;
+    state.question_input_text.clear();
+
+    // 检查是否所有问题都已回答
+    if (state.question_current_index >= static_cast<int>(state.question_list.size())) {
+      // 所有问题都已回答，提交结果
+      if (state.question_promise) {
+        agent::QuestionResponse response;
+        response.answers = state.question_answers;
+        response.cancelled = false;
+        state.question_promise->set_value(response);
+      }
+      state.reset_question_panel();
+      state.agent_state.set_activity("Thinking...");
+    }
+    ctx.refresh_fn();
+    return true;
+  }
+
+  // Tab: 跳到下一个问题（不提交当前答案）
+  if (event == Event::Tab) {
+    // 保存当前输入
+    if (state.question_current_index < static_cast<int>(state.question_answers.size())) {
+      state.question_answers[state.question_current_index] = state.question_input_text;
+    }
+    // 循环切换问题
+    state.question_current_index = (state.question_current_index + 1) % static_cast<int>(state.question_list.size());
+    // 加载之前的答案（如果有）
+    state.question_input_text = state.question_answers[state.question_current_index];
+    ctx.refresh_fn();
+    return true;
+  }
+
+  // 处理文本输入
+  if (event.is_character()) {
+    state.question_input_text += event.character();
+    ctx.refresh_fn();
+    return true;
+  }
+
+  // Backspace
+  if (event == Event::Backspace && !state.question_input_text.empty()) {
+    state.question_input_text.pop_back();
+    ctx.refresh_fn();
+    return true;
+  }
+
+  // ArrowUp/ArrowDown: 切换问题
+  if (event == Event::ArrowUp) {
+    if (state.question_current_index < static_cast<int>(state.question_answers.size())) {
+      state.question_answers[state.question_current_index] = state.question_input_text;
+    }
+    state.question_current_index =
+        (state.question_current_index - 1 + static_cast<int>(state.question_list.size())) % static_cast<int>(state.question_list.size());
+    state.question_input_text = state.question_answers[state.question_current_index];
+    ctx.refresh_fn();
+    return true;
+  }
+  if (event == Event::ArrowDown) {
+    if (state.question_current_index < static_cast<int>(state.question_answers.size())) {
+      state.question_answers[state.question_current_index] = state.question_input_text;
+    }
+    state.question_current_index = (state.question_current_index + 1) % static_cast<int>(state.question_list.size());
+    state.question_input_text = state.question_answers[state.question_current_index];
+    ctx.refresh_fn();
+    return true;
+  }
+
+  return true;  // 拦截所有其他按键
+}
+
+// ============================================================
 // 主事件处理
 // ============================================================
 
 bool handle_main_event(AppState& state, AppContext& ctx, ScreenInteractive& screen, Event event) {
+  // Question 面板专属事件（优先处理）
+  if (state.show_question_panel) {
+    return handle_question_panel_event(state, ctx, event);
+  }
+
   // 会话列表面板专属事件
   if (state.show_sessions_panel) {
     return handle_sessions_panel_event(state, ctx, event);

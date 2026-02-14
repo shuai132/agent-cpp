@@ -488,6 +488,7 @@ void Session::execute_tool_calls() {
     ctx.working_dir = config_.working_dir.string();
     ctx.abort_signal = abort_signal_;
     ctx.ask_permission = permission_handler_;
+    ctx.question_handler = question_handler_;
 
     // Provide child session creation callback for Task tool
     auto self = shared_from_this();

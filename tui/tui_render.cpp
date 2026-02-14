@@ -372,4 +372,80 @@ Element build_sessions_panel(AppState& state) {
   return vbox({panel_header, separator() | dim, session_list | flex});
 }
 
+// ============================================================
+// Question 面板
+// ============================================================
+
+Element build_question_panel(AppState& state) {
+  Elements question_items;
+
+  if (state.question_list.empty()) {
+    question_items.push_back(text("  No questions") | dim);
+  } else {
+    for (int qi = 0; qi < static_cast<int>(state.question_list.size()); ++qi) {
+      bool is_current = (qi == state.question_current_index);
+      bool is_answered = !state.question_answers[qi].empty();
+
+      // 问题标题
+      std::string q_prefix = is_current ? " ▶ " : "   ";
+      std::string q_status = is_answered ? " ✓" : "";
+
+      auto q_line = hbox({
+          text(q_prefix) | color(is_current ? Color::Cyan : Color::White),
+          text("Q" + std::to_string(qi + 1) + ": ") | bold | color(Color::Yellow),
+          paragraph(state.question_list[qi]),
+          text(q_status) | color(Color::Green),
+      });
+
+      question_items.push_back(q_line);
+
+      // 显示答案（如果有）或输入框（如果是当前问题）
+      if (is_current) {
+        // 当前问题的输入框
+        std::string input_display = state.question_input_text;
+        if (input_display.empty()) {
+          input_display = "Type your answer here...";
+        }
+        auto input_line = hbox({
+            text("      A: ") | dim, text(input_display) | (state.question_input_text.empty() ? dim : nothing) | underlined,
+            text("▌") | blink | color(Color::Cyan),  // 光标
+        });
+        question_items.push_back(input_line);
+      } else if (is_answered) {
+        // 已回答的问题显示答案
+        auto answer_line = hbox({
+            text("      A: ") | dim,
+            text(state.question_answers[qi]) | color(Color::GrayLight),
+        });
+        question_items.push_back(answer_line);
+      }
+
+      question_items.push_back(text(""));
+    }
+  }
+
+  auto question_list = vbox(question_items)  //
+                       | vscroll_indicator   //
+                       | yframe              //
+                       | flex;
+
+  auto panel_header = hbox({
+      text(" ❓ AI Questions ") | bold | color(Color::Yellow),
+      filler(),
+      text(" ↑↓ switch  Enter next/submit  Tab skip  Esc cancel ") | dim,
+  });
+
+  auto progress_text =
+      text(" Question " + std::to_string(state.question_current_index + 1) + "/" + std::to_string(state.question_list.size()) + " ") |
+      color(Color::Cyan);
+
+  return vbox({
+      panel_header,
+      separator() | dim,
+      question_list | flex,
+      separator() | dim,
+      hbox({progress_text, filler()}),
+  });
+}
+
 }  // namespace agent_cli
