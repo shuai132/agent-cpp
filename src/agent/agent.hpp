@@ -20,12 +20,16 @@
 #include "tool/builtin/builtins.hpp"
 #include "tool/tool.hpp"
 
+// Skill system
+#include "skill/skill.hpp"
+
 // Session management
 #include "session/session.hpp"
 
 namespace agent {
 
 // Initialize the agent framework
+// Registers providers, builtin tools, and discovers skills from cwd
 void init();
 
 // Shutdown the agent framework

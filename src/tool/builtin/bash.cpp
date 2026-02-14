@@ -612,6 +612,7 @@ void register_builtins() {
   registry.register_tool(std::make_shared<GrepTool>());
   registry.register_tool(std::make_shared<QuestionTool>());
   registry.register_tool(std::make_shared<TaskTool>());
+  registry.register_tool(std::make_shared<SkillTool>());
 }
 
 }  // namespace agent::tools

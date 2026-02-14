@@ -87,6 +87,19 @@ class TaskTool : public SimpleTool {
   std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
 };
 
+// Skill tool - load specialized skill instructions on demand
+class SkillTool : public SimpleTool {
+ public:
+  SkillTool();
+
+  // Dynamic description that lists available skills
+  std::string description() const override;
+
+  std::vector<ParameterSchema> parameters() const override;
+
+  std::future<ToolResult> execute(const json &args, const ToolContext &ctx) override;
+};
+
 // Register all builtin tools
 void register_builtins();
 

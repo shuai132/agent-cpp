@@ -66,6 +66,7 @@ A complete Agent Loop implementation supporting multi-turn conversations, tool c
 | `grep`     | Search file contents                  |
 | `task`     | Launch a subagent for subtasks        |
 | `question` | Ask the user a question               |
+| `skill`    | Load skill instructions on demand     |
 
 ### 🔌 LLM Providers
 
@@ -111,7 +112,8 @@ Supports layered configuration, from highest to lowest priority:
 
 1. Project-level: `.agent-cpp/config.json`
 2. Global: `~/.config/agent-cpp/config.json`
-3. Instruction files: Hierarchical search for `AGENTS.md` (similar to Claude Code)
+3. Instruction files: Hierarchical search for `AGENTS.md`, compatible with `CLAUDE.md`, `.agents/`, `.claude/`,
+   `.opencode/` conventions
 
 ### 🌐 MCP Support (WIP)
 
@@ -119,6 +121,20 @@ Model Context Protocol client, supporting:
 
 - Local stdio transport
 - Remote SSE transport
+
+### 📦 Skill System
+
+Compatible with the skill specifications of mainstream AI Agent tools such as OpenCode and Claude Code, enabling
+cross-tool skill sharing:
+
+- **Multi-convention compatible**: Automatically searches `.agent-cpp/`, `.agents/`, `.claude/`, `.opencode/`
+  directories for `SKILL.md`
+- **Hierarchical discovery**: Traverses from the project directory up to the git root, collecting all skills
+- **Global sharing**: Supports global directories like `~/.agents/skills/` for sharing skills across Agent tools
+- **On-demand loading**: LLM loads skills via the built-in `skill` tool, preserving context window space
+- **Standard format**: YAML frontmatter + Markdown body with name, description, license and other metadata
+
+See [Skill System Design](doc/skill-system.md) for details.
 
 ## Dependencies
 
@@ -245,7 +261,7 @@ agent-cpp/
 │   ├── session/        # Session management (Agent Loop, compaction, truncation)
 │   ├── agent/          # Agent framework entry point
 │   ├── mcp/            # MCP client (WIP)
-│   └── skill/          # Skill system (WIP)
+│   └── skill/          # Skill system (discovery, parsing, registry)
 ├── examples/           # Example programs
 │   ├── agent.cpp       # Interactive Agent CLI
 │   ├── api_test.cpp    # API call test
@@ -254,13 +270,14 @@ agent-cpp/
     ├── test_message.cpp
     ├── test_tool.cpp
     ├── test_session.cpp
-    └── test_llm.cpp
+    ├── test_llm.cpp
+    └── test_skill.cpp
 ```
 
 ## TODO
 
 - [ ] TUI support
-- [ ] Skill system improvements
+- [x] Skill system
 - [ ] Session persistence
 - [ ] REST API for server mode
 - [ ] C++20 coroutine (`co_await`) interface
@@ -270,6 +287,7 @@ agent-cpp/
 
 ## Related Docs
 
+- [Skill System Design](doc/skill-system.md)
 - [OpenCode Core Architecture Analysis](doc/OpenCode核心架构分析.md)
 
 ## Acknowledgments

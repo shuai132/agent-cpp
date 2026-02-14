@@ -101,6 +101,7 @@ add_library(agent_core
 
         # Skill system
         src/skill/skill.cpp
+        src/tool/builtin/skill.cpp
 )
 
 target_include_directories(agent_core PUBLIC
@@ -156,6 +157,7 @@ if (AGENT_BUILD_TESTS)
             tests/test_session.cpp
             tests/test_llm.cpp
             tests/test_json_store.cpp
+            tests/test_skill.cpp
     )
 
     target_link_libraries(agent_tests PRIVATE

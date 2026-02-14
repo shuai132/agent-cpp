@@ -57,9 +57,6 @@ int main() {
   // Initialize ASIO
   asio::io_context io_ctx;
 
-  // Register builtin tools
-  tools::register_builtins();
-
   // Track completion
   std::mutex mtx;
   std::condition_variable cv;

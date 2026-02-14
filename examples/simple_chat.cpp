@@ -335,8 +335,8 @@ int main(int argc, char* argv[]) {
   // Initialize ASIO
   asio::io_context io_ctx;
 
-  // Register builtin tools
-  tools::register_builtins();
+  // Initialize agent framework (providers, builtin tools, skill discovery)
+  agent::init();
 
   // Create persistent store
   auto store = std::make_shared<JsonMessageStore>(config_paths::config_dir() / "sessions");

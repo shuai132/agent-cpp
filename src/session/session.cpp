@@ -2,7 +2,9 @@
 
 #include <spdlog/spdlog.h>
 
+#include <fstream>
 #include <functional>
+#include <sstream>
 
 #include "bus/bus.hpp"
 #include "llm/anthropic.hpp"
@@ -57,6 +59,33 @@ Session::Session(asio::io_context &io_ctx, const Config &config, AgentType agent
     if (provider_config) {
       provider_ = llm::ProviderFactory::instance().create(provider_name, *provider_config, io_ctx);
       if (provider_) break;
+    }
+  }
+
+  // Inject AGENTS.md / CLAUDE.md instructions into system_prompt
+  auto instruction_files = config_paths::find_agent_instructions(config.working_dir);
+  if (!instruction_files.empty()) {
+    std::string injected;
+    for (const auto &file : instruction_files) {
+      std::ifstream ifs(file);
+      if (!ifs.is_open()) continue;
+
+      std::ostringstream ss;
+      ss << ifs.rdbuf();
+      auto content = ss.str();
+      if (content.empty()) continue;
+
+      if (!injected.empty()) injected += "\n\n";
+      injected += "Instructions from: " + file.string() + "\n" + content;
+      spdlog::debug("Loaded instructions from: {}", file.string());
+    }
+
+    if (!injected.empty()) {
+      if (!agent_config_.system_prompt.empty()) {
+        agent_config_.system_prompt += "\n\n";
+      }
+      agent_config_.system_prompt += injected;
+      spdlog::info("Injected {} instruction file(s) into system prompt", instruction_files.size());
     }
   }
 }

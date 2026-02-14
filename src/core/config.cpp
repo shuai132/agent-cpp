@@ -268,35 +268,69 @@ fs::path project_config_file() {
   return fs::current_path() / ".agent-cpp" / "config.json";
 }
 
-std::vector<fs::path> find_agent_instructions(const fs::path &start_dir) {
-  std::vector<fs::path> result;
-
+std::optional<fs::path> find_git_root(const fs::path &start_dir) {
   fs::path current = start_dir;
-  while (current.has_parent_path()) {
-    // Check for AGENTS.md
-    auto agents_md = current / "AGENTS.md";
-    if (fs::exists(agents_md)) {
-      result.push_back(agents_md);
+  while (true) {
+    if (fs::exists(current / ".git")) {
+      return current;
     }
-
-    // Check in .agent-cpp directory
-    auto agent_dir_md = current / ".agent-cpp" / "AGENTS.md";
-    if (fs::exists(agent_dir_md)) {
-      result.push_back(agent_dir_md);
-    }
-
     auto parent = current.parent_path();
     if (parent == current) break;
     current = parent;
   }
+  return std::nullopt;
+}
 
-  // Reverse so parent instructions come first
+std::vector<fs::path> find_agent_instructions(const fs::path &start_dir) {
+  std::vector<fs::path> result;
+
+  // Determine the boundary: stop at git worktree root or filesystem root
+  auto git_root = find_git_root(start_dir);
+
+  fs::path current = start_dir;
+  while (true) {
+    // Per-directory candidates in priority order.
+    // AGENTS.md variants take precedence over CLAUDE.md variants.
+    // Within each convention, root-level file takes precedence over nested dir file.
+    struct {
+      const char *path;
+    } candidates[] = {
+        {"AGENTS.md"}, {".agent-cpp/AGENTS.md"}, {".agents/AGENTS.md"}, {".opencode/AGENTS.md"}, {"CLAUDE.md"}, {".claude/CLAUDE.md"},
+    };
+
+    for (const auto &c : candidates) {
+      auto candidate = current / c.path;
+      if (fs::exists(candidate)) {
+        result.push_back(candidate);
+      }
+    }
+
+    // Stop if we've reached the git root
+    if (git_root && current == *git_root) break;
+
+    auto parent = current.parent_path();
+    if (parent == current) break;  // Filesystem root
+    current = parent;
+  }
+
+  // Reverse so parent (more general) instructions come first
   std::reverse(result.begin(), result.end());
 
-  // Add global instructions
-  auto global_md = config_dir() / "AGENTS.md";
-  if (fs::exists(global_md)) {
-    result.insert(result.begin(), global_md);
+  // Add global instructions (highest generality, prepended)
+  // Search order: agent-cpp own config > cross-tool shared > Claude compat > OpenCode compat
+  auto home = home_dir();
+  std::vector<fs::path> global_candidates = {
+      config_dir() / "AGENTS.md",                   // ~/.config/agent-cpp/AGENTS.md
+      home / ".agents" / "AGENTS.md",               // ~/.agents/AGENTS.md
+      home / ".claude" / "CLAUDE.md",               // ~/.claude/CLAUDE.md
+      home / ".config" / "opencode" / "AGENTS.md",  // ~/.config/opencode/AGENTS.md
+  };
+
+  // Insert global instructions in reverse order so the first found ends up first
+  for (auto it = global_candidates.rbegin(); it != global_candidates.rend(); ++it) {
+    if (fs::exists(*it)) {
+      result.insert(result.begin(), *it);
+    }
   }
 
   return result;
