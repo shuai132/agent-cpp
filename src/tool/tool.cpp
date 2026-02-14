@@ -6,6 +6,90 @@
 
 namespace agent {
 
+// Sanitize a string to ensure it contains only valid UTF-8 sequences.
+// Invalid bytes are replaced with the Unicode replacement character (U+FFFD).
+static std::string sanitize_utf8(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+    
+    size_t i = 0;
+    while (i < input.size()) {
+        unsigned char c = static_cast<unsigned char>(input[i]);
+        
+        if (c <= 0x7F) {
+            // ASCII byte
+            output.push_back(static_cast<char>(c));
+            i++;
+        } else if ((c & 0xE0) == 0xC0) {
+            // 2-byte sequence
+            if (i + 1 < input.size() &&
+                (static_cast<unsigned char>(input[i + 1]) & 0xC0) == 0x80) {
+                // Validate overlong encoding: the codepoint must be >= 0x80
+                uint32_t cp = ((c & 0x1F) << 6) | (static_cast<unsigned char>(input[i + 1]) & 0x3F);
+                if (cp >= 0x80) {
+                    output.push_back(input[i]);
+                    output.push_back(input[i + 1]);
+                } else {
+                    output.append("\xEF\xBF\xBD"); // U+FFFD
+                }
+                i += 2;
+            } else {
+                output.append("\xEF\xBF\xBD"); // U+FFFD
+                i++;
+            }
+        } else if ((c & 0xF0) == 0xE0) {
+            // 3-byte sequence
+            if (i + 2 < input.size() &&
+                (static_cast<unsigned char>(input[i + 1]) & 0xC0) == 0x80 &&
+                (static_cast<unsigned char>(input[i + 2]) & 0xC0) == 0x80) {
+                uint32_t cp = ((c & 0x0F) << 12) |
+                              ((static_cast<unsigned char>(input[i + 1]) & 0x3F) << 6) |
+                              (static_cast<unsigned char>(input[i + 2]) & 0x3F);
+                if (cp >= 0x800 && (cp < 0xD800 || cp > 0xDFFF)) {
+                    output.push_back(input[i]);
+                    output.push_back(input[i + 1]);
+                    output.push_back(input[i + 2]);
+                } else {
+                    output.append("\xEF\xBF\xBD"); // U+FFFD
+                }
+                i += 3;
+            } else {
+                output.append("\xEF\xBF\xBD"); // U+FFFD
+                i++;
+            }
+        } else if ((c & 0xF8) == 0xF0) {
+            // 4-byte sequence
+            if (i + 3 < input.size() &&
+                (static_cast<unsigned char>(input[i + 1]) & 0xC0) == 0x80 &&
+                (static_cast<unsigned char>(input[i + 2]) & 0xC0) == 0x80 &&
+                (static_cast<unsigned char>(input[i + 3]) & 0xC0) == 0x80) {
+                uint32_t cp = ((c & 0x07) << 18) |
+                              ((static_cast<unsigned char>(input[i + 1]) & 0x3F) << 12) |
+                              ((static_cast<unsigned char>(input[i + 2]) & 0x3F) << 6) |
+                              (static_cast<unsigned char>(input[i + 3]) & 0x3F);
+                if (cp >= 0x10000 && cp <= 0x10FFFF) {
+                    output.push_back(input[i]);
+                    output.push_back(input[i + 1]);
+                    output.push_back(input[i + 2]);
+                    output.push_back(input[i + 3]);
+                } else {
+                    output.append("\xEF\xBF\xBD"); // U+FFFD
+                }
+                i += 4;
+            } else {
+                output.append("\xEF\xBF\xBD"); // U+FFFD
+                i++;
+            }
+        } else {
+            // Invalid leading byte
+            output.append("\xEF\xBF\xBD"); // U+FFFD
+            i++;
+        }
+    }
+    
+    return output;
+}
+
 namespace fs = std::filesystem;
 
 // Parameter schema to JSON
@@ -143,12 +227,15 @@ TruncateResult output(const std::string& text, size_t max_lines, size_t max_byte
     TruncateResult result;
     result.truncated = false;
     
+    // Sanitize input to ensure valid UTF-8 (prevents nlohmann::json type_error.316)
+    std::string safe_text = sanitize_utf8(text);
+    
     // Check byte limit
-    if (text.size() > max_bytes) {
+    if (safe_text.size() > max_bytes) {
         result.truncated = true;
-        result.content = text.substr(0, max_bytes);
+        result.content = safe_text.substr(0, max_bytes);
         result.content += "\n... [Output truncated. " + 
-            std::to_string(text.size() - max_bytes) + " bytes omitted]";
+            std::to_string(safe_text.size() - max_bytes) + " bytes omitted]";
         return result;
     }
     
@@ -157,18 +244,18 @@ TruncateResult output(const std::string& text, size_t max_lines, size_t max_byte
     size_t pos = 0;
     size_t last_newline = 0;
     
-    while ((pos = text.find('\n', pos)) != std::string::npos) {
+    while ((pos = safe_text.find('\n', pos)) != std::string::npos) {
         line_count++;
         last_newline = pos;
         pos++;
         
         if (line_count >= max_lines) {
             result.truncated = true;
-            result.content = text.substr(0, last_newline);
+            result.content = safe_text.substr(0, last_newline);
             
             // Count remaining lines
             size_t remaining = 0;
-            while ((pos = text.find('\n', pos)) != std::string::npos) {
+            while ((pos = safe_text.find('\n', pos)) != std::string::npos) {
                 remaining++;
                 pos++;
             }
@@ -178,7 +265,7 @@ TruncateResult output(const std::string& text, size_t max_lines, size_t max_byte
         }
     }
     
-    result.content = text;
+    result.content = safe_text;
     return result;
 }
 
